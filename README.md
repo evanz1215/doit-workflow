@@ -37,7 +37,7 @@ claude plugin marketplace add evanz1215/doit-workflow
 或從本機 clone 安裝（開發時用，改檔後 `/reload-plugins` 即生效）：
 
 ```bash
-claude plugin marketplace add D:/Project/repos/ai-agent-workflow
+claude plugin marketplace add D:/Project/repos/doit-workflow
 ```
 
 ```bash
@@ -49,7 +49,7 @@ claude plugin install doit@doit-workflows
 不想裝 marketplace 的話，單次測試可以：
 
 ```bash
-claude --plugin-dir D:/Project/repos/ai-agent-workflow/doit
+claude --plugin-dir D:/Project/repos/doit-workflow/doit
 ```
 
 ### 使用
