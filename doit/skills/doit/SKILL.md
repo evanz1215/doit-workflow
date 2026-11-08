@@ -8,6 +8,8 @@ argument-hint: <開發指令 | resume | status | abort>
 
 把開發指令變成一次有證據、可回退、可接續的交付。
 
+**語言**：所有回報、計畫、任務檔紀錄、commit 訊息一律繁體中文（程式碼與指令除外）。
+
 **v0.1 範圍**：低／中風險、brownfield、一般模式。判成高風險時仍可走，但高風險專屬關卡（plan-critic、fresh implementer、verifier、瀏覽器驗證）尚未實作，要明確告知使用者並以中風險流程加「每步必回報」處理。`auto`、`new` 子指令尚未實作，收到時告知並改走一般模式。
 
 指令：$ARGUMENTS
@@ -30,8 +32,10 @@ argument-hint: <開發指令 | resume | status | abort>
 
 ## 任務檔與寫入工具
 
-- 任務檔在 `.claude/doit/tasks/<日期>-<slug>.md`，`.claude/doit/ACTIVE` 指向它。不進 git。
-- **一律用工具寫**，不手動編輯頂端欄位與紀錄行（唯一例外：新增 `## 計畫 vN` 小節，直接追加在檔尾）：
+- 任務檔在 `.doit/tasks/<日期>-<slug>.md`，`.doit/ACTIVE` 指向它。不進 git。`.doit/` 不是敏感目錄，Edit/Write 不會被擋。
+- **頂端欄位與紀錄行一律用 log.js 寫**（有格式驗證、自動時間戳、自動插到「## 紀錄」小節）。
+- **其餘小節直接用 Edit 寫**：填「需求原文」「基準檢查」「影響範圍」三節的內容，以及在檔尾追加 `## 計畫 vN`。不要用 node -e 或其他腳本改任務檔。
+- 不確定用法時 `node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --help`。
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --new <slug> --set 類型=feat
@@ -60,13 +64,13 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 ## 階段 0：前置檢查
 
 - 必須是 git repo。不是就告知並停止（建議 `git init` 後 commit 一次再來）。
-- `git status --porcelain` 必須為空（`.claude/doit/` 已排除）。不乾淨就請使用者自己 commit 或 stash，不要替使用者決定。
+- `git status --porcelain` 必須為空（`.doit/` 已排除）。不乾淨就請使用者自己 commit 或 stash，不要替使用者決定。
 - 記下 **base 分支**與**起始 SHA**（`git rev-parse HEAD`）。之後「完整變更」一律以起始 SHA 為基準。
 - 讀 `CLAUDE.md`、`AGENTS.md`、`README.md`、`CONTRIBUTING.md`（有哪個讀哪個），整理與這次任務相關的慣例與禁止事項。
 - 從 `package.json` / `pyproject.toml` / `Makefile` / `go.mod` / CI 設定找測試、lint、型別檢查、build 指令，**記下來源檔案**。找不到的不猜，列為「無基準」並在計畫中標明。
 - **執行任何指令前先看副作用**：會寫 DB、打外部服務、寄信、刪資料的，只在確認目標是本機或測試環境時才跑；無法確認就不跑，記為未驗證。
 - 跑一次基準檢查（lint + 相關測試；夠快就全跑），結果寫進任務檔 `## 基準檢查`。
-- 讀教訓檔：`.claude/doit/LESSONS.md`（專案）與 `~/.claude/doit/LESSONS.md`（全域），挑相關條目照做。
+- 讀教訓檔：`node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --lessons` 會印出專案（`.doit/LESSONS.md`）與全域（`~/.doit/LESSONS.md`）兩份；全域檔在專案目錄外，不要用 cat 或 Read 直接讀。挑相關條目照做。
 - 建立任務檔：`log.js --new <slug> --set 類型=<type> --set base=<分支> --set 起始SHA=<sha> --set "下一步=探索"`。類型：feat / fix / refactor / test / perf / docs / chore。
 
 ## 階段 1：探索（只讀不改）
@@ -129,16 +133,23 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 - **低風險**：跳過，直接進階段 8。
 - **中風險**：讀 `references/review.md`，呼叫 `doit:reviewer` subagent（背景執行），輸入只有：需求原文、計畫 vN、驗收標準、`git diff <起始SHA>..HEAD` 與工作目錄變更、專案路徑。**不給實作過程**。
 - 結果以 `[審查 reviewer @<sha>] 結論：…` 加逐條意見記進任務檔。blocker / major 必須修（回階段 5 的對應步驟）；minor 可修可記。修完只重審改過的部分，最多兩輪，之後停下交使用者。
+- **審查後的修正不做 wip commit**，留在工作目錄，等門檻通過後進交付 commit。這樣交付 commit 一定有內容，也不需要改寫已有的 commit。
 
 ## 階段 8：完成
 
 完成門檻（全部成立）：每條驗收標準有證據；基準檢查沒有新失敗；審查沒有未處理的 blocker/major；範圍外清單已回報。
 
-門檻過後：`--set 狀態=完成 --set "下一步=無（已完成）"`，然後交付 commit `<type>: <摘要>`。有 CI 設定（`.github/workflows/`、`.gitlab-ci.yml` 等）就開 PR，沒有就回報分支名稱讓使用者自己 merge。檢查點 commit 保留，squash 由使用者決定。
+門檻過後，**分兩次呼叫**：先 `--set 狀態=完成 --set "下一步=無（已完成）"`，再做**交付 commit** `<type>: <摘要>`。不能用 `&&` 串在同一條指令，因為 hook 在整條指令執行前就依舊狀態判定，會連狀態更新一起擋下。
+
+- 工作目錄有未 commit 的變更（審查修正、最後一步）→ 全部進交付 commit。
+- 沒有任何未 commit 變更（審查無意見、每步都做了 wip）→ `git commit --allow-empty`，訊息同樣寫 `<type>: <摘要>`，內文註明「完成門檻通過；變更在前面的 wip 檢查點」。
+- **不要**用 `git reset --soft` 改寫既有 wip commit。檢查點保留，squash 由使用者在 merge 時決定。
+
+有 CI 設定（`.github/workflows/`、`.gitlab-ci.yml` 等）就開 PR，沒有就回報分支名稱讓使用者自己 merge。
 
 ## 階段 9：檢討
 
-中風險每次做；低風險只在有 `[錯誤]` 時做。讀 `references/retro.md`，把任務檔裡每個 `[錯誤]` 變成一條預防規則寫進對應教訓檔。
+中風險每次做；低風險只在有 `[錯誤]` 時做。讀 `references/retro.md`，把任務檔裡每個 `[錯誤]` 變成一條預防規則，用 `log.js --lesson project|global` 搭配 heredoc 寫進對應教訓檔。全域檔在 `~/.doit/LESSONS.md`，在專案目錄外，不要直接 Write。
 
 ## 回報格式
 

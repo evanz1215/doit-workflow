@@ -61,7 +61,7 @@ claude --plugin-dir D:/Project/repos/doit-workflow/doit
 | `/doit:doit status` | 看狀態 |
 | `/doit:doit abort` | 中止 |
 
-任務狀態放在目標專案的 `.claude/doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。
+任務狀態放在目標專案的 `.doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。
 
 ### 測試
 

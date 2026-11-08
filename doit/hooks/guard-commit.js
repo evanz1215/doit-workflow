@@ -3,6 +3,9 @@
 // PreToolUse (Bash|PowerShell)
 // 硬規則 2：完成門檻未過，不得做交付 commit；只允許 wip: 前綴的檢查點 commit。
 // 任務未完成時不得 git push / git merge。
+//
+// 判斷 git 子指令時先把 heredoc 內文與引號字串去掉，避免 commit 訊息或
+// log.js 的紀錄文字裡出現「push」「merge」「commit」就被誤擋。
 
 const lib = require('./lib.js');
 
@@ -10,9 +13,10 @@ const input = lib.readStdinJson();
 const cmd = String((input.tool_input || {}).command || '');
 if (!cmd) lib.allow();
 
-const isGitCommit = /\bgit\b[^|&;\n]*\bcommit\b/.test(cmd);
-const isGitPush = /\bgit\b[^|&;\n]*\bpush\b/.test(cmd);
-const isGitMerge = /\bgit\b[^|&;\n]*\bmerge(?!-)\b/.test(cmd);
+const bare = lib.stripShellLiterals(cmd);
+const isGitCommit = /\bgit\b[^|&;\n]*\bcommit\b/.test(bare);
+const isGitPush = /\bgit\b[^|&;\n]*\bpush\b/.test(bare);
+const isGitMerge = /\bgit\b[^|&;\n]*\bmerge(?!-)\b/.test(bare);
 if (!isGitCommit && !isGitPush && !isGitMerge) lib.allow();
 
 const cwd = input.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -28,10 +32,11 @@ if (isGitPush || isGitMerge) {
   );
 }
 
-// 檢查點 commit：-m "wip: ..."、-m 'wip: ...'、或 heredoc 第一行 wip:
+// 檢查點 commit 的判定要看原始指令（wip: 在引號裡）：
+// -m "wip: ..."、-m 'wip: ...'、或 heredoc 第一行 wip:
 const isWip =
   /-m\s*["']?\s*wip:/i.test(cmd) ||
-  /<<\s*-?\s*["']?\w+["']?\s*\r?\n\s*wip:/i.test(cmd);
+  /<<-?\s*["']?\w+["']?[^\n]*\r?\n\s*wip:/i.test(cmd);
 
 if (isWip) {
   if (lib.LOCKED_STATUSES.includes(status)) {

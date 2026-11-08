@@ -11,7 +11,7 @@
 | 預設情境 | **Brownfield**（改既有 codebase）；Greenfield 是可切換模式 |
 | 骨幹 | **風險分級**決定關卡數量 |
 | 無人看管 | 低風險可直接跑；中風險計畫批准後可跑；高風險不開放 |
-| 狀態檔 | 放 `.claude/doit/`，**不進 git**（用 `.git/info/exclude`） |
+| 狀態檔 | 放 `.doit/`，**不進 git**（用 `.git/info/exclude`） |
 | Git | 每任務一分支；中高風險每步檢查點 commit；有 CI 才開 PR |
 | 審查 | 中風險一個 reviewer；高風險 verifier（實跑）+ reviewer（品質） |
 | UI 驗證 | 有畫面改動時用內建瀏覽器實際操作 |
@@ -86,15 +86,15 @@ Greenfield 專案做完第一個任務後，後續任務自然落回 brownfield 
 
 ### 階段 0：前置檢查
 
-- 必須是 git repo，工作目錄乾淨（排除 `.claude/doit/` 後 `git status --porcelain` 為空）。不乾淨就停，請使用者自己處理。
-- 確認 `.claude/doit/` 已在 `.git/info/exclude`；沒有就加。
+- 必須是 git repo，工作目錄乾淨（排除 `.doit/` 後 `git status --porcelain` 為空）。不乾淨就停，請使用者自己處理。
+- 確認 `.doit/` 已在 `.git/info/exclude`；沒有就加。
 - 記下 base 分支與起始 SHA。所有「完整變更」的比較以起始 SHA 為基準。
 - 讀 `CLAUDE.md`、`AGENTS.md`、`README.md`、`CONTRIBUTING.md`，整理相關慣例。
 - 從 `package.json` / `pyproject.toml` / `Makefile` / CI 設定找出測試、lint、build 指令，**記下來源檔案**。找不到的不猜，列為「無基準」。
 - 跑一次基準檢查（lint + 相關測試），記結果。
 - 執行任何指令前看副作用：會寫 DB、打外部服務、寄信、刪資料的只在確認是本機或測試環境時才跑。
-- 讀教訓檔：專案 `.claude/doit/LESSONS.md`、全域 `~/.claude/doit/LESSONS.md`，挑相關條目。
-- 檢查 `.claude/doit/ACTIVE` 有沒有未完成任務；有就走接續流程（第 8 節）。
+- 讀教訓檔：專案 `.doit/LESSONS.md`、全域 `~/.doit/LESSONS.md`，挑相關條目。
+- 檢查 `.doit/ACTIVE` 有沒有未完成任務；有就走接續流程（第 8 節）。
 
 ### 階段 1：探索（只讀）
 
@@ -116,7 +116,7 @@ Greenfield 專案做完第一個任務後，後續任務自然落回 brownfield 
 
 ### 階段 3：計畫落檔
 
-寫入 `.claude/doit/tasks/<id>.md`，格式見第 7 節。重點欄位：
+寫入 `.doit/tasks/<id>.md`，格式見第 7 節。重點欄位：
 
 - **需求原文**：只放使用者真的說過的字。
 - **模式、等級、命中條件**。
@@ -134,7 +134,7 @@ Greenfield 專案做完第一個任務後，後續任務自然落回 brownfield 
 - 有「未釐清（阻擋）」時，整體同意不算，要逐項回答。
 - 批准寫進任務檔：計畫版本 + 使用者原話。
 - 使用者改計畫 → 新版本、批准歸零、重新分級。
-- **Hook 強制**：任務狀態不是「已批准」或之後的狀態時，對 `.claude/doit/` 以外路徑的 Edit/Write 一律擋下（低風險無人看管模式例外，見第 6 節）。
+- **Hook 強制**：任務狀態不是「已批准」或之後的狀態時，對 `.doit/` 以外路徑的 Edit/Write 一律擋下（低風險無人看管模式例外，見第 6 節）。
 
 ### 階段 5：實作
 
@@ -168,7 +168,7 @@ Greenfield 專案做完第一個任務後，後續任務自然落回 brownfield 
 3. 審查沒有未處理的 blocker / major
 4. 範圍外清單已回報使用者
 
-門檻過後：最後一個交付 commit（`<type>: <摘要>`），任務狀態改「完成」。repo 有 CI 設定（`.github/workflows/`、`.gitlab-ci.yml` 等）就開 PR，沒有就回報分支名稱讓使用者自己 merge。檢查點 commit 保留，要不要 squash 由使用者在 merge 時決定。
+門檻過後：任務狀態改「完成」，再做交付 commit（`<type>: <摘要>`）。審查後的修正不做 wip，留給交付 commit；若沒有任何未 commit 變更則用 `--allow-empty` 標記門檻通過，不改寫既有 wip。repo 有 CI 設定（`.github/workflows/`、`.gitlab-ci.yml` 等）就開 PR，沒有就回報分支名稱讓使用者自己 merge。檢查點 commit 保留，要不要 squash 由使用者在 merge 時決定。
 
 **Hook 強制**：狀態不是「完成」時，擋下非 `wip:` 前綴的 `git commit`。
 
@@ -176,7 +176,7 @@ Greenfield 專案做完第一個任務後，後續任務自然落回 brownfield 
 
 - 中高風險每次做；低風險只在出過錯時做。
 - 看任務檔裡所有 `[錯誤]` 紀錄，問：這個錯誤下次怎麼預防？寫成一條規則。
-- 工具與環境的坑進全域 `~/.claude/doit/LESSONS.md`；這個 codebase 的坑進專案 `.claude/doit/LESSONS.md`。
+- 工具與環境的坑進全域 `~/.doit/LESSONS.md`；這個 codebase 的坑進專案 `.doit/LESSONS.md`。
 - 格式：編號、犯錯次數、首次與最近日期、情境、根本原因、預防規則、適用時機。同樣的錯只加次數不重複建條。
 
 ## 6. 無人看管模式
@@ -210,12 +210,12 @@ Greenfield 專案做完第一個任務後，後續任務自然落回 brownfield 
 ## 7. 狀態與檔案
 
 ```
-<repo>/.claude/doit/            # 不進 git
+<repo>/.doit/            # 不進 git
   ACTIVE                       # 目前任務檔名，一行
   tasks/<YYYYMMDD>-<slug>.md   # 任務檔
   LESSONS.md                   # 專案教訓
 
-~/.claude/doit/
+~/.doit/
   LESSONS.md                   # 全域教訓
 ```
 
@@ -267,7 +267,7 @@ base: main
 | Hook | 時機 | 行為 |
 |---|---|---|
 | `SessionStart` | 開 session | 若有 ACTIVE 任務，注入一行提示「有未完成任務 <id>，狀態 <s>」 |
-| `PreToolUse` Edit/Write | 每次改檔前 | 有 ACTIVE 任務且狀態在「已批准」之前 → 擋下（`.claude/doit/` 路徑例外；低風險 auto 例外） |
+| `PreToolUse` Edit/Write | 每次改檔前 | 有 ACTIVE 任務且狀態在「已批准」之前 → 擋下（`.doit/` 路徑例外；低風險 auto 例外） |
 | `PreToolUse` Edit/Write | 同上 | 無人看管模式且迭代超過上限 → 擋下並回傳停止訊息 |
 | `PreToolUse` Bash | `git commit` 前 | 狀態不是「完成」且訊息不是 `wip:` 開頭 → 擋下 |
 | `PreToolUse` Bash | `git push` / `git merge` 前 | 任務未完成 → 擋下 |

@@ -1,5 +1,5 @@
 # doit 工作流在這個 repo 自己跑任務時的狀態檔
-.claude/doit/
+.doit/
 
 # 編輯器與系統
 .DS_Store

@@ -1,22 +1,55 @@
 #!/usr/bin/env node
 'use strict';
-// 任務檔的唯一寫入工具。agent 不手動編輯頂端欄位與紀錄行。
-//
-// 用法：
-//   node log.js --new <slug> [--set 欄位=值 ...]        建立任務檔與 ACTIVE
-//   node log.js [--set 欄位=值 ...] "[標籤] 文字" ...     追加紀錄行、更新欄位
-//   node log.js --show                                   印出頂端欄位
-//   node log.js --close 完成|中止 "[標籤] 文字"           結束任務（狀態改為完成/中止）
-//
-// 標籤：[完成] [紀錄] [證據 標準N] [錯誤 來源：agent|使用者|環境 分類：需求|實作|工具|環境|流程]
-//       [審查 ...] [批准 vN] [升級] [停止] [範圍外]
+// 任務檔的頂端欄位與紀錄行只能用這個工具寫；其餘小節（需求原文、基準檢查、
+// 影響範圍、## 計畫 vN）可以直接用 Edit 寫，因為 .doit/ 不是敏感目錄。
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const lib = require('../hooks/lib.js');
 
-const TAG_RE = /^\[(完成|紀錄|證據 標準\d+|錯誤 來源：(agent|使用者|環境) 分類：(需求|實作|工具|環境|流程)|審查 [^\]]+|批准 v\d+|升級|停止|範圍外)\]\s*\S/;
+const HELP = `log.js：doit 任務檔寫入工具
+
+用法：
+  node log.js --new <slug> [--set 欄位=值 ...]        建立任務檔與 ACTIVE（自動把 .doit/ 加進 .git/info/exclude）
+  node log.js [--set 欄位=值 ...] "[標籤] 文字" ...     追加紀錄行到「## 紀錄」小節、更新頂端欄位
+  node log.js --show                                   印出頂端欄位與檔案路徑
+  node log.js --close 完成|中止 ["[標籤] 文字"]         結束任務（狀態改為完成／中止）
+  node log.js --lessons                                印出專案與全域教訓檔內容
+  node log.js --lesson project|global < 內容            把一條教訓（stdin，markdown）追加到專案或全域教訓檔
+  node log.js --help                                   這份說明
+
+教訓檔位置：專案 <repo>/.doit/LESSONS.md；全域 ~/.doit/LESSONS.md（兩者都不在 .claude/ 下，不會被擋）。
+寫教訓請用 --lesson 搭配 heredoc，不要直接 Write 全域檔（在專案目錄外會被權限擋下）。
+
+欄位（--set）：
+  狀態      探索中 | 待使用者 | 待批准 | 已批准 | 實作中 | 待審查 | 完成 | 中止
+  模式      brownfield | greenfield
+  等級      低 | 中 | 高
+  命中條件  高風險條件原文，或「無」
+  類型      feat | fix | refactor | test | perf | docs | chore
+  計畫版本  整數
+  批准      無 | v1「使用者原話」
+  分支      尚未建立 | <分支名>
+  base      base 分支
+  起始SHA   git rev-parse HEAD
+  下一步    一句話，接續時第一件要做的事（Stop hook 檢查它不能為空）
+
+紀錄行標籤：
+  [完成] 步驟 N：…
+  [紀錄] …
+  [證據 標準N] …        [證據 基準] …（基準檢查無新失敗）
+  [錯誤 來源：agent|使用者|環境 分類：需求|實作|工具|環境|流程] …
+  [審查 reviewer @<sha>] 結論：…
+  [批准 vN] 「原話」
+  [升級] 低→中：原因
+  [範圍外] …
+  [停止] …
+
+紀錄行會自動加上時間戳，並插入「## 紀錄」小節尾端（在 ## 計畫 vN 之前）。
+`;
+
+const TAG_RE = /^\[(完成|紀錄|證據 (標準\d+|基準)|錯誤 來源：(agent|使用者|環境) 分類：(需求|實作|工具|環境|流程)|審查 [^\]]+|批准 v\d+|升級|停止|範圍外)\]\s*\S/;
 
 const FIELD_VALIDATORS = {
   '狀態': (v) => lib.ALL_STATUSES.includes(v) || `狀態必須是：${lib.ALL_STATUSES.join('、')}`,
@@ -39,13 +72,15 @@ const DEFAULT_FIELDS = [
   ['下一步', ''],
 ];
 
+const LOG_HEADING = '## 紀錄';
+
 function die(msg) {
   process.stderr.write(`log.js: ${msg}\n`);
   process.exit(1);
 }
 
 function parseArgs(argv) {
-  const out = { sets: [], lines: [], new: null, show: false, close: null };
+  const out = { sets: [], lines: [], new: null, show: false, close: null, help: false, lessons: false, lesson: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--set') {
@@ -58,9 +93,18 @@ function parseArgs(argv) {
       if (!out.new) die('--new 需要 slug');
     } else if (a === '--show') {
       out.show = true;
+    } else if (a === '--lessons') {
+      out.lessons = true;
+    } else if (a === '--lesson') {
+      out.lesson = argv[++i];
+      if (!['project', 'global'].includes(out.lesson)) die('--lesson 需要 project 或 global');
+    } else if (a === '--help' || a === '-h') {
+      out.help = true;
     } else if (a === '--close') {
       out.close = argv[++i];
       if (![lib.STATUS.DONE, lib.STATUS.ABORTED].includes(out.close)) die('--close 需要 完成 或 中止');
+    } else if (a.startsWith('--')) {
+      die(`不認識的選項 ${a}（--help 看用法）`);
     } else {
       out.lines.push(a);
     }
@@ -69,14 +113,15 @@ function parseArgs(argv) {
 }
 
 function ensureExcluded(root) {
+  const entry = lib.WF_DIR + '/';
   try {
     const excludePath = execSync('git rev-parse --git-path info/exclude', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] })
       .toString().trim();
     const abs = path.resolve(root, excludePath);
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     const cur = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
-    if (!cur.split(/\r?\n/).some((l) => l.trim() === '.claude/doit/')) {
-      fs.writeFileSync(abs, cur + (cur && !cur.endsWith('\n') ? '\n' : '') + '.claude/doit/\n');
+    if (!cur.split(/\r?\n/).some((l) => l.trim() === entry)) {
+      fs.writeFileSync(abs, cur + (cur && !cur.endsWith('\n') ? '\n' : '') + entry + '\n');
     }
   } catch {
     // 不是 git repo 或 git 不可用：由 skill 的階段 0 另行處理
@@ -91,7 +136,9 @@ function today() {
 
 function serialize(fields, bodyLines) {
   const head = ['---', ...Object.entries(fields).map(([k, v]) => `${k}: ${v}`), '---'];
-  return head.concat(bodyLines).join('\n');
+  const body = bodyLines.slice();
+  while (body.length && body[body.length - 1] === '') body.pop();
+  return head.concat(body).join('\n') + '\n';
 }
 
 function applySets(fields, sets) {
@@ -105,11 +152,69 @@ function applySets(fields, sets) {
   }
 }
 
+// 把新紀錄行插進「## 紀錄」小節尾端（下一個 ## 標題之前），沒有該小節就補在檔尾。
+function appendLogLines(bodyLines, newLines) {
+  const body = bodyLines.slice();
+  let start = body.findIndex((l) => l.trim() === LOG_HEADING);
+  if (start === -1) {
+    while (body.length && body[body.length - 1] === '') body.pop();
+    body.push('', LOG_HEADING);
+    start = body.length - 1;
+  }
+  let end = body.length;
+  for (let i = start + 1; i < body.length; i++) {
+    if (/^## /.test(body[i])) { end = i; break; }
+  }
+  const section = body.slice(start + 1, end);
+  while (section.length && section[section.length - 1] === '') section.pop();
+  section.push(...newLines);
+  const rest = body.slice(end);
+  const tail = rest.length ? ['', ...rest] : [];
+  return body.slice(0, start + 1).concat(section, tail);
+}
+
+function stamp(line) {
+  return `[${lib.nowStamp()}] ${line}`;
+}
+
+function printLessons(root) {
+  const files = [
+    ['專案教訓', path.join(lib.wfDir(root), 'LESSONS.md')],
+    ['全域教訓', lib.GLOBAL_LESSONS],
+  ];
+  for (const [label, p] of files) {
+    process.stdout.write(`===== ${label}：${p} =====\n`);
+    if (fs.existsSync(p)) process.stdout.write(fs.readFileSync(p, 'utf8').trimEnd() + '\n');
+    else process.stdout.write('（無）\n');
+  }
+}
+
+function appendLesson(root, scope) {
+  const target = scope === 'global' ? lib.GLOBAL_LESSONS : path.join(lib.wfDir(root), 'LESSONS.md');
+  let content = '';
+  try { content = fs.readFileSync(0, 'utf8'); } catch { /* 沒有 stdin */ }
+  content = content.replace(/\r\n/g, '\n').trim();
+  if (!content) die('--lesson 需要從 stdin 讀到教訓內容（用 heredoc）');
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const existing = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : '';
+  let out = existing;
+  if (!existing.trim()) out = `# ${scope === 'global' ? '全域' : '專案'}教訓\n`;
+  if (!out.endsWith('\n')) out += '\n';
+  out += '\n' + content + '\n';
+  fs.writeFileSync(target, out);
+  process.stdout.write(`已追加到 ${lib.normalize(target)}\n`);
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.help) { process.stdout.write(HELP); return; }
+
   const root = lib.findProjectRoot(process.cwd());
-  if (!root) die('找不到專案根目錄（沒有 .git 也沒有 .claude/doit/ACTIVE）');
+  if (!root) die(`找不到專案根目錄（沒有 .git 也沒有 ${lib.WF_DIR}/ACTIVE）`);
   const dir = lib.wfDir(root);
+
+  if (args.lessons) { printLessons(root); return; }
+  if (args.lesson) { appendLesson(root, args.lesson); return; }
 
   if (args.new) {
     const slug = args.new.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
@@ -121,6 +226,7 @@ function main() {
 
     const fields = Object.fromEntries(DEFAULT_FIELDS);
     applySets(fields, args.sets);
+    for (const l of args.lines) if (!TAG_RE.test(l)) die(`紀錄行格式不符：${l}`);
     const body = [
       '',
       '## 需求原文',
@@ -129,48 +235,46 @@ function main() {
       '',
       '## 影響範圍',
       '',
-      '## 紀錄',
-      `[${lib.nowStamp()}] [紀錄] 任務建立`,
+      LOG_HEADING,
+      stamp('[紀錄] 任務建立'),
+      ...args.lines.map(stamp),
     ];
-    for (const l of args.lines) {
-      if (!TAG_RE.test(l)) die(`紀錄行格式不符：${l}`);
-      body.push(`[${lib.nowStamp()}] ${l}`);
-    }
-    fs.writeFileSync(taskPath, serialize(fields, body) + '\n');
+    fs.writeFileSync(taskPath, serialize(fields, body));
     fs.writeFileSync(path.join(dir, lib.ACTIVE_FILE), name + '\n');
-    process.stdout.write(`已建立 ${path.relative(root, taskPath)}，ACTIVE 已指向它\n`);
+    process.stdout.write(`已建立 ${lib.normalize(path.relative(root, taskPath))}，ACTIVE 已指向它\n`);
     return;
   }
 
   const task = lib.readActiveTask(root);
-  if (!task) die('沒有進行中的任務（.claude/doit/ACTIVE 不存在或指向的檔案不存在）');
+  if (!task && args.show) {
+    // 階段 0 用 --show 檢查有沒有可接續的任務，「沒有」是正常結果，不算錯誤
+    process.stdout.write(`（無進行中任務：${lib.WF_DIR}/ACTIVE 不存在或指向的檔案不存在）\n`);
+    return;
+  }
+  if (!task) die(`沒有進行中的任務（${lib.WF_DIR}/ACTIVE 不存在或指向的檔案不存在）`);
 
   if (args.show) {
     for (const [k, v] of Object.entries(task.fields)) process.stdout.write(`${k}: ${v}\n`);
-    process.stdout.write(`檔案: ${path.relative(root, task.taskPath)}\n`);
+    process.stdout.write(`檔案: ${lib.normalize(path.relative(root, task.taskPath))}\n`);
     return;
   }
 
   if (args.close) args.sets.push(['狀態', args.close]);
-  if (!args.sets.length && !args.lines.length) die('沒有要做的事：給 --set 或至少一行紀錄');
+  if (!args.sets.length && !args.lines.length) die('沒有要做的事：給 --set 或至少一行紀錄（--help 看用法）');
 
   const fields = { ...task.fields };
   applySets(fields, args.sets);
 
-  const bodyLines = task.lines.slice(task.headerEnd + 1);
   for (const l of args.lines) {
-    if (!TAG_RE.test(l)) die(`紀錄行格式不符：${l}\n合法標籤見檔頭說明`);
-    bodyLines.push(`[${lib.nowStamp()}] ${l}`);
+    if (!TAG_RE.test(l)) die(`紀錄行格式不符：${l}\n合法標籤見 --help`);
   }
+  const newLines = args.lines.map(stamp);
   for (const [k, v] of args.sets) {
-    if (k === '狀態' || k === '計畫版本' || k === '批准' || k === '等級') {
-      bodyLines.push(`[${lib.nowStamp()}] [紀錄] ${k} → ${v}`);
-    }
+    if (['狀態', '計畫版本', '批准', '等級'].includes(k)) newLines.push(stamp(`[紀錄] ${k} → ${v}`));
   }
 
-  // 去掉尾端多餘空行再補一個換行
-  while (bodyLines.length && bodyLines[bodyLines.length - 1] === '') bodyLines.pop();
-  fs.writeFileSync(task.taskPath, serialize(fields, bodyLines) + '\n');
+  const bodyLines = appendLogLines(task.lines.slice(task.headerEnd + 1), newLines);
+  fs.writeFileSync(task.taskPath, serialize(fields, bodyLines));
   process.stdout.write(`已更新 ${task.name}` + (args.sets.length ? `（${args.sets.map(([k, v]) => `${k}=${v}`).join(', ')}）` : '') + '\n');
 }
 

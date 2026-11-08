@@ -30,6 +30,7 @@ reviewer 回傳的每條意見分 blocker / major / minor。
 
 - 寫進任務檔：先一行 `[審查 reviewer @<目前 HEAD 短 sha>] 結論：可合併 | 需修正`，再逐條 `[審查 reviewer] [blocker|major|minor] <意見> → <處理：已修正：怎麼改 | 不採納：理由 | 記下>`。
 - **blocker / major 必須修**，回階段 5 對應的步驟，修完重跑該步驗證，再送審**只重審改過的部分**（prompt 寫明「只看自上次審查後的 diff：git diff <上次審查 sha>」）。
+- **審查後的修正不做 wip commit**，留在工作目錄等交付 commit 一起進去；重審時 prompt 寫「含工作目錄未 commit 的變更」。
 - 最多兩輪。兩輪後仍有 blocker / major，`--set 狀態=待使用者 --set "下一步=使用者決定如何處理審查意見"` 停下，把未解決意見列給使用者。
 - minor 可修可記；不修的要寫理由。
 - 不採納 reviewer 意見時，理由要具體到這個專案，不能只寫「不需要」。
@@ -44,6 +45,6 @@ reviewer 回傳的每條意見分 blocker / major / minor。
 | 4 | 範圍外清單已回報使用者 | 任務檔所有 `[範圍外]` 行都出現在給使用者的回報裡 |
 | 5 | 工作目錄沒有計畫沒提到的檔案變更 | `git status --porcelain` 與 `git diff --stat <起始SHA>` 逐檔對照實作步驟表 |
 
-門檻過了：`--set 狀態=完成 --set "下一步=無（已完成）"` → 交付 commit → 有 CI 就開 PR，沒有就回報分支名。
+門檻過了：`--set 狀態=完成 --set "下一步=無（已完成）"` → 交付 commit（有未 commit 變更就含進去；沒有就 `--allow-empty`；不改寫既有 wip）→ 有 CI 就開 PR，沒有就回報分支名。
 
 門檻沒過：不得改狀態、不得做交付 commit（hook 也會擋）。缺什麼補什麼，補不了就 `--set 狀態=待使用者` 說明。

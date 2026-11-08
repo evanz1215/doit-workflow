@@ -5,8 +5,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const WF_DIR = path.join('.claude', 'doit');
+// 狀態目錄放 repo 根目錄的 .doit/，不放 .claude/：Claude Code 把 .claude/ 視為敏感區，
+// 直接 Edit 會跳權限詢問。
+const WF_DIR = '.doit';
 const ACTIVE_FILE = 'ACTIVE';
+// 全域教訓檔也不放 ~/.claude/（同樣是敏感區），改放 ~/.doit/
+const GLOBAL_LESSONS = path.join(require('os').homedir(), '.doit', 'LESSONS.md');
 
 const STATUS = {
   EXPLORING: '探索中',
@@ -39,7 +43,7 @@ function normalize(p) {
   return String(p || '').replace(/\\/g, '/');
 }
 
-// 從 start 往上找到含 .claude/doit/ACTIVE 或 .git 的目錄；找不到回 null
+// 從 start 往上找到含 .doit/ACTIVE 或 .git 的目錄；找不到回 null
 function findProjectRoot(start) {
   let dir = path.resolve(start || process.cwd());
   for (;;) {
@@ -92,6 +96,24 @@ function isUnderWfDir(root, filePath) {
   return rel === normalize(WF_DIR) || rel.startsWith(normalize(WF_DIR) + '/');
 }
 
+// 檔案是否在專案根目錄之外（不同磁碟或 .. 開頭）
+function isOutsideProject(root, filePath) {
+  const rel = path.relative(root, path.resolve(root, filePath));
+  return rel.startsWith('..') || path.isAbsolute(rel);
+}
+
+// 把 shell 指令「去皮」：移除 heredoc 內文與引號字串，只留真正的指令結構。
+// 用在判斷 git push / merge / commit 時，避免 commit 訊息或紀錄文字裡的字被誤判。
+function stripShellLiterals(cmd) {
+  let s = String(cmd);
+  // heredoc：<<'EOF' ... EOF、<<EOF ... EOF、<<-EOF
+  s = s.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, ' ');
+  // 雙引號與單引號字串
+  s = s.replace(/"(?:[^"\\]|\\.)*"/g, ' ');
+  s = s.replace(/'[^']*'/g, ' ');
+  return s;
+}
+
 // ---- hook 輸出 ----
 function denyPreToolUse(reason) {
   process.stdout.write(JSON.stringify({
@@ -127,7 +149,8 @@ function nowStamp() {
 }
 
 module.exports = {
-  WF_DIR, ACTIVE_FILE, STATUS, ALL_STATUSES, LOCKED_STATUSES, CLOSED_STATUSES, TIERS,
+  WF_DIR, ACTIVE_FILE, GLOBAL_LESSONS, STATUS, ALL_STATUSES, LOCKED_STATUSES, CLOSED_STATUSES, TIERS,
   readStdinJson, normalize, findProjectRoot, wfDir, parseFrontmatter, readActiveTask,
-  isClosed, isUnderWfDir, denyPreToolUse, allow, blockStop, sessionContext, nowStamp,
+  isClosed, isUnderWfDir, isOutsideProject, stripShellLiterals,
+  denyPreToolUse, allow, blockStop, sessionContext, nowStamp,
 };

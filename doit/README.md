@@ -13,7 +13,7 @@
 /doit:doit abort          中止
 ```
 
-任務狀態放在目標專案的 `.claude/doit/`，由 `tools/log.js` 寫入，不進 git。
+任務狀態放在目標專案的 `.doit/`，由 `tools/log.js` 寫入，不進 git。
 
 ## 需求
 

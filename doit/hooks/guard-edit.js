@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 // PreToolUse (Edit|Write|MultiEdit|NotebookEdit)
-// 硬規則 1：任務計畫未批准前，不得修改 .claude/doit/ 以外的檔案。
+// 硬規則 1：任務計畫未批准前，不得修改專案內 .doit/ 以外的檔案。
+// 專案目錄之外的檔案（例如 scratchpad）不歸這個 hook 管。
 // 例外：無人看管模式且等級為低（v0.3 才啟用，先保留判斷）。
 
 const lib = require('./lib.js');
@@ -16,6 +17,7 @@ if (lib.isClosed(task)) lib.allow();
 const ti = input.tool_input || {};
 const filePath = ti.file_path || ti.notebook_path || '';
 if (!filePath) lib.allow();
+if (lib.isOutsideProject(root, filePath)) lib.allow();
 if (lib.isUnderWfDir(root, filePath)) lib.allow();
 
 const status = task.fields['狀態'] || '';
