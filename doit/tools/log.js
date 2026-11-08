@@ -17,10 +17,12 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --close 完成|中止 ["[標籤] 文字"]         結束任務（狀態改為完成／中止）
   node log.js --lessons                                印出專案與全域教訓檔內容
   node log.js --lesson project|global < 內容            把一條教訓（stdin，markdown）追加到專案或全域教訓檔
+  node log.js --lesson-bump project|global <編號> [--hit]  既有教訓再犯：犯錯次數 +1（--hit 則遇到次數 +1），「最近」改成今天
   node log.js --help                                   這份說明
 
 教訓檔位置：專案 <repo>/.doit/LESSONS.md；全域 ~/.doit/LESSONS.md（兩者都不在 .claude/ 下，不會被擋）。
 寫教訓請用 --lesson 搭配 heredoc，不要直接 Write 全域檔（在專案目錄外會被權限擋下）。
+同一個坑再犯用 --lesson-bump（例如 --lesson-bump global G-001），不要手改次數或另建重複條目。
 
 欄位（--set）：
   狀態      探索中 | 待使用者 | 待批准 | 已批准 | 實作中 | 待審查 | 完成 | 中止
@@ -80,7 +82,7 @@ function die(msg) {
 }
 
 function parseArgs(argv) {
-  const out = { sets: [], lines: [], new: null, show: false, close: null, help: false, lessons: false, lesson: null };
+  const out = { sets: [], lines: [], new: null, show: false, close: null, help: false, lessons: false, lesson: null, bump: null, hit: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--set') {
@@ -98,6 +100,14 @@ function parseArgs(argv) {
     } else if (a === '--lesson') {
       out.lesson = argv[++i];
       if (!['project', 'global'].includes(out.lesson)) die('--lesson 需要 project 或 global');
+    } else if (a === '--lesson-bump') {
+      const scope = argv[++i];
+      const id = argv[++i];
+      if (!['project', 'global'].includes(scope)) die('--lesson-bump 需要 project 或 global');
+      if (!id || !/^[GP]-\d+$/.test(id)) die('--lesson-bump 需要教訓編號，例如 G-001 或 P-002');
+      out.bump = { scope, id };
+    } else if (a === '--hit') {
+      out.hit = true;
     } else if (a === '--help' || a === '-h') {
       out.help = true;
     } else if (a === '--close') {
@@ -189,8 +199,43 @@ function printLessons(root) {
   }
 }
 
+function lessonFile(root, scope) {
+  return scope === 'global' ? lib.GLOBAL_LESSONS : path.join(lib.wfDir(root), 'LESSONS.md');
+}
+
+// 既有教訓再犯：找到「### <編號> 」那一條，次數 +1、「最近」改成今天。
+function bumpLesson(root, scope, id, hit) {
+  const target = lessonFile(root, scope);
+  if (!fs.existsSync(target)) die(`教訓檔不存在：${lib.normalize(target)}`);
+  const raw = fs.readFileSync(target, 'utf8');
+  const eol = raw.includes('\r\n') ? '\r\n' : '\n';
+  const lines = raw.split(/\r?\n/);
+  const headRe = new RegExp(`^###\\s+${id}(\\s|$)`);
+  const start = lines.findIndex((l) => headRe.test(l));
+  if (start === -1) die(`教訓檔裡沒有 ${id}（${lib.normalize(target)}）`);
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^##/.test(lines[i])) { end = i; break; }
+  }
+  const field = hit ? '遇到次數' : '犯錯次數';
+  const countRe = new RegExp(`^(\\s*-\\s*${field}：)(\\d+)(.*)$`);
+  const dateRe = /^(\s*-\s*首次：.*?／\s*最近：)(\d{4}-\d{2}-\d{2})(.*)$/;
+  const todayStr = lib.nowStamp().slice(0, 10);
+  let counted = false;
+  let dated = false;
+  for (let i = start + 1; i < end; i++) {
+    const c = lines[i].match(countRe);
+    if (c && !counted) { lines[i] = `${c[1]}${Number(c[2]) + 1}${c[3]}`; counted = true; continue; }
+    const d = lines[i].match(dateRe);
+    if (d && !dated) { lines[i] = `${d[1]}${todayStr}${d[3]}`; dated = true; }
+  }
+  if (!counted) die(`${id} 裡找不到「- ${field}：N」這一行`);
+  fs.writeFileSync(target, lines.join(eol));
+  process.stdout.write(`已更新 ${id}：${field} +1` + (dated ? `，最近 → ${todayStr}` : '（沒有「首次／最近」行，日期未更新）') + '\n');
+}
+
 function appendLesson(root, scope) {
-  const target = scope === 'global' ? lib.GLOBAL_LESSONS : path.join(lib.wfDir(root), 'LESSONS.md');
+  const target = lessonFile(root, scope);
   let content = '';
   try { content = fs.readFileSync(0, 'utf8'); } catch { /* 沒有 stdin */ }
   content = content.replace(/\r\n/g, '\n').trim();
@@ -215,6 +260,7 @@ function main() {
 
   if (args.lessons) { printLessons(root); return; }
   if (args.lesson) { appendLesson(root, args.lesson); return; }
+  if (args.bump) { bumpLesson(root, args.bump.scope, args.bump.id, args.hit); return; }
 
   if (args.new) {
     const slug = args.new.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
@@ -270,7 +316,8 @@ function main() {
   }
   const newLines = args.lines.map(stamp);
   for (const [k, v] of args.sets) {
-    if (['狀態', '計畫版本', '批准', '等級'].includes(k)) newLines.push(stamp(`[紀錄] ${k} → ${v}`));
+    // 批准不自動留紀錄：階段 4 已要求 agent 手寫 [批准 vN] 「原話」，避免重複兩行
+    if (['狀態', '計畫版本', '等級'].includes(k)) newLines.push(stamp(`[紀錄] ${k} → ${v}`));
   }
 
   const bodyLines = appendLogLines(task.lines.slice(task.headerEnd + 1), newLines);

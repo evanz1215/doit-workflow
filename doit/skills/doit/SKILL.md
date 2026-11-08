@@ -34,7 +34,7 @@ argument-hint: <開發指令 | resume | status | abort>
 
 - 任務檔在 `.doit/tasks/<日期>-<slug>.md`，`.doit/ACTIVE` 指向它。不進 git。`.doit/` 不是敏感目錄，Edit/Write 不會被擋。
 - **頂端欄位與紀錄行一律用 log.js 寫**（有格式驗證、自動時間戳、自動插到「## 紀錄」小節）。
-- **其餘小節直接用 Edit 寫**：填「需求原文」「基準檢查」「影響範圍」三節的內容，以及在檔尾追加 `## 計畫 vN`。不要用 node -e 或其他腳本改任務檔。
+- **其餘小節直接用 Edit 寫**：填「需求原文」「基準檢查」「影響範圍」三節的內容，以及在檔尾追加 `## 計畫 vN`。不要用 node -e、`cat >>` heredoc 或其他 shell 腳本改任務檔：長段含反引號與表格的 Markdown 會被 Bash 工具的解析器拒跑。
 - 不確定用法時 `node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --help`。
 
 ```bash
@@ -149,7 +149,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 
 ## 階段 9：檢討
 
-中風險每次做；低風險只在有 `[錯誤]` 時做。讀 `references/retro.md`，把任務檔裡每個 `[錯誤]` 變成一條預防規則，用 `log.js --lesson project|global` 搭配 heredoc 寫進對應教訓檔。全域檔在 `~/.doit/LESSONS.md`，在專案目錄外，不要直接 Write。
+中風險每次做；低風險只在有 `[錯誤]` 時做。讀 `references/retro.md`，把任務檔裡每個 `[錯誤]` 變成一條預防規則，用 `log.js --lesson project|global` 搭配 heredoc 寫進對應教訓檔；教訓檔裡已有同一個坑時改用 `log.js --lesson-bump global G-001`（再犯）或加 `--hit`（踩到既有問題），不重建條目也不手改次數。全域檔在 `~/.doit/LESSONS.md`，在專案目錄外，不要直接 Write 或 Edit。
 
 ## 回報格式
 

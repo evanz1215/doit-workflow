@@ -27,7 +27,14 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --lesson global <<'EOF'
 EOF
 ```
 
-專案教訓用 `--lesson project`。同一條教訓已存在時，改用 Edit 直接改專案檔的「次數」與「最近」；全域檔在專案外，請把更新內容寫成一條新的教訓附註，或請使用者手動改。
+專案教訓用 `--lesson project`。同一條教訓已存在時不要重建，也不要手改次數，用 bump：
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --lesson-bump global G-001        # 犯錯次數 +1
+node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --lesson-bump project P-003 --hit # 遇到次數 +1
+```
+
+兩者都會把「最近」改成今天。要補充情境，另外在任務檔記一行 `[紀錄]` 即可。
 
 ## 教訓格式
 

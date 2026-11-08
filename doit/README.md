@@ -4,6 +4,14 @@
 
 三條硬規則由 hooks 強制，不靠 agent 自覺：計畫未批准不得改專案檔；完成門檻未過不得做交付 commit、push、merge；離開前必須寫明下一步。
 
+## 安裝
+
+```
+/plugin install doit --marketplace evanz1215/doit-workflow
+```
+
+或在終端機：`claude plugin marketplace add evanz1215/doit-workflow` 再 `claude plugin install doit@doit-workflows`。
+
 ## 使用
 
 ```

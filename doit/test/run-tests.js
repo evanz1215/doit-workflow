@@ -129,6 +129,18 @@ const lessonsText = fs.readFileSync(path.join(tmp, STATE, 'LESSONS.md'), 'utf8')
 check('第二條追加且只有一個標題', lp2.status === 0 && (lessonsText.match(/^# 專案教訓/gm) || []).length === 1 && /P-002/.test(lessonsText));
 check('--lesson 沒有 stdin 內容被拒', spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '' }).status !== 0);
 check('--lesson 範圍不合法被拒', runLog(['--lesson', 'team'], tmp).code !== 0);
+spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-003 可累加\n- 犯錯次數：1\n- 遇到次數：0\n- 首次：2026-01-01 ／ 最近：2026-01-01\n- 類型：流程\n' });
+const b1 = runLog(['--lesson-bump', 'project', 'P-003'], tmp);
+let lt = fs.readFileSync(path.join(tmp, STATE, 'LESSONS.md'), 'utf8');
+check('--lesson-bump 犯錯次數 +1', b1.code === 0 && /### P-003 可累加\n- 犯錯次數：2\n- 遇到次數：0\n/.test(lt), b1.err + lt.slice(-200));
+check('--lesson-bump 更新「最近」為今天', new RegExp(`首次：2026-01-01 ／ 最近：${new Date().getFullYear()}-\\d{2}-\\d{2}`).test(lt), lt.slice(-200));
+const b2 = runLog(['--lesson-bump', 'project', 'P-003', '--hit'], tmp);
+lt = fs.readFileSync(path.join(tmp, STATE, 'LESSONS.md'), 'utf8');
+check('--lesson-bump --hit 遇到次數 +1、犯錯不變', b2.code === 0 && /- 犯錯次數：2\n- 遇到次數：1\n/.test(lt), lt.slice(-200));
+check('--lesson-bump 其他條目不受影響', /### P-001 測試教訓\n- 預防規則：x\n/.test(lt));
+check('--lesson-bump 不存在的編號被拒', runLog(['--lesson-bump', 'project', 'P-099'], tmp).code !== 0);
+check('--lesson-bump 編號格式不合被拒', runLog(['--lesson-bump', 'project', 'abc'], tmp).code !== 0);
+check('--lesson-bump 沒有次數行被拒', runLog(['--lesson-bump', 'project', 'P-002'], tmp).code !== 0);
 
 console.log('\n[5] 紀錄插入位置：在「## 紀錄」小節內、計畫之前，不累積空行');
 fs.appendFileSync(taskPath(), '\n## 計畫 v1\n\n### 做法\n改 a.js\n');
@@ -148,7 +160,8 @@ check('沒有連續空行', !/\n\n\n/.test(t5));
 console.log('\n[6] commit guard 去皮：訊息或紀錄文字裡的 push/merge/commit 不算');
 check('log.js 紀錄文字含 merge 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('node log.js "[紀錄] 回報分支 $(git rev-parse --short HEAD) 由使用者 merge"'), tmp)));
 check('log.js 紀錄文字含 commit 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('node log.js "[紀錄] 交付 commit 已完成"'), tmp)));
-runLog(['--set', '狀態=已批准', '--set', '批准=v1「照計畫做」'], tmp);
+runLog(['--set', '狀態=已批准', '--set', '批准=v1「照計畫做」', '[批准 v1] 「照計畫做」'], tmp);
+check('批准只留 agent 手寫那一行，不自動補 [紀錄] 批准 →', /\[批准 v1\] 「照計畫做」/.test(taskText()) && !/\[紀錄\] 批准 →/.test(taskText()));
 check('wip 訊息含 push 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "wip: 步驟 3 完成，之後再 push"'), tmp)));
 check('heredoc 內文含 merge 的 wip 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -F - <<\'EOF\'\nwip: 步驟 2\n\n之後 merge 到 main\nEOF\n'), tmp)));
 check('真正的 git push 仍被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git push origin HEAD'), tmp)));
