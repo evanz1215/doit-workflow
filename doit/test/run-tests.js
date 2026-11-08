@@ -130,6 +130,9 @@ check('狀態變更自動留紀錄', /\[紀錄\] 狀態 → 待批准/.test(task
 const lessons = runLog(['--lessons'], tmp);
 check('--lessons 印出兩個標題', lessons.code === 0 && /專案教訓/.test(lessons.out) && /全域教訓/.test(lessons.out), lessons.out);
 check('[證據 基準] 是合法標籤', runLog(['[證據 基準] npm test 無新失敗'], tmp).code === 0);
+check('[證據 標準1 基準側] 編號後接說明是合法標籤', runLog(['[證據 標準1 基準側] 修改前 build 出 CS0649'], tmp).code === 0);
+check('[證據 標準2（修改後）] 全形括號說明是合法標籤', runLog(['[證據 標準2（修改後）] 0 個 CS0649'], tmp).code === 0);
+check('[證據 隨便] 仍被拒', runLog(['[證據 隨便] x'], tmp).code !== 0);
 const lp = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-001 測試教訓\n- 預防規則：x\n' });
 check('--lesson project 寫入專案教訓檔', lp.status === 0 && /P-001 測試教訓/.test(fs.readFileSync(path.join(tmp, STATE, 'LESSONS.md'), 'utf8')), lp.stderr);
 const lp2 = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-002 第二條\n' });
