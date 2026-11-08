@@ -1,0 +1,10 @@
+# doit 工作流在這個 repo 自己跑任務時的狀態檔
+.claude/doit/
+
+# 編輯器與系統
+.DS_Store
+Thumbs.db
+*.swp
+
+# Node（目前沒有相依套件，預留）
+node_modules/

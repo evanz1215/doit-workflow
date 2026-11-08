@@ -1,0 +1,76 @@
+# ai-agent-workflow
+
+自己用的 AI Agent 開發工作流。設計依據與市面調查見：
+
+- [market-workflows-comparison.md](market-workflows-comparison.md)：12 種市面工作流的流程與優缺點
+- [workflow-design.md](workflow-design.md)：設計稿（分級、階段、無人看管、hooks、演進順序）
+
+## `doit/`：Claude Code plugin（v0.1）
+
+v0.1 範圍：低／中風險、brownfield、一般模式、reviewer、hooks 擋改檔與 commit、任務檔、接續。
+
+```
+doit/
+  .claude-plugin/plugin.json
+  skills/doit/SKILL.md              主流程
+  skills/doit/references/           tiering / plan-format / review / retro
+  agents/reviewer.md              獨立審查員 subagent
+  hooks/hooks.json                四個 hook 的註冊
+  hooks/guard-edit.js             未批准不得改專案檔
+  hooks/guard-commit.js           未完成不得交付 commit / push / merge
+  hooks/guard-stop.js             離開前必須填「下一步」
+  hooks/session-start.js          有未完成任務時提示
+  tools/log.js                    任務檔唯一寫入工具
+  test/run-tests.js               hooks 與 log.js 的測試
+```
+
+### 安裝（本機）
+
+這個 repo 本身是一個本機 marketplace（`.claude-plugin/marketplace.json`）。
+
+```bash
+claude plugin marketplace add D:/Project/repos/ai-agent-workflow
+```
+
+```bash
+claude plugin install doit@doit-workflows
+```
+
+改了 plugin 後，在 session 裡 `/reload-plugins`，或重開 session。
+
+不想裝 marketplace 的話，單次測試可以：
+
+```bash
+claude --plugin-dir D:/Project/repos/ai-agent-workflow/doit
+```
+
+### 使用
+
+| 指令 | 用途 |
+|---|---|
+| `/doit:doit <開發指令>` | 新任務 |
+| `/doit:doit` 或 `/doit:doit resume` | 接續未完成任務 |
+| `/doit:doit status` | 看狀態 |
+| `/doit:doit abort` | 中止 |
+
+任務狀態放在目標專案的 `.claude/doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。
+
+### 測試
+
+```bash
+node doit/test/run-tests.js
+```
+
+```bash
+claude plugin validate doit
+```
+
+### 演進
+
+| 版本 | 範圍 |
+|---|---|
+| v0.1 | 低／中風險、brownfield、一般模式、reviewer、hooks、任務檔、接續 |
+| v0.2 | 高風險：plan-critic、fresh implementer、verifier、瀏覽器驗證 |
+| v0.3 | 無人看管模式與煞車 |
+| v0.4 | Greenfield 模式與慣例檔 |
+| v0.5 | 檢討自動化、`/doit:doit status` 強化 |
