@@ -28,7 +28,7 @@ const HELP = `log.js：doit 任務檔寫入工具
   狀態      探索中 | 待使用者 | 待批准 | 已批准 | 實作中 | 待審查 | 完成 | 中止
   模式      brownfield | greenfield
   等級      低 | 中 | 高
-  命中條件  高風險條件原文，或「無」
+  命中條件  定成這一級的依據（高或中風險條件原文）；低風險寫「無」
   類型      feat | fix | refactor | test | perf | docs | chore
   計畫版本  整數
   批准      無 | v1「使用者原話」
