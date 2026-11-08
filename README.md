@@ -1,6 +1,6 @@
-# ai-agent-workflow
+# doit-workflow
 
-自己用的 AI Agent 開發工作流。設計依據與市面調查見：
+自己用的 AI Agent 開發工作流 **doit**。設計依據與市面調查見：
 
 - [market-workflows-comparison.md](market-workflows-comparison.md)：12 種市面工作流的流程與優缺點
 - [workflow-design.md](workflow-design.md)：設計稿（分級、階段、無人看管、hooks、演進順序）
@@ -24,9 +24,17 @@ doit/
   test/run-tests.js               hooks 與 log.js 的測試
 ```
 
-### 安裝（本機）
+### 安裝
 
-這個 repo 本身是一個本機 marketplace（`.claude-plugin/marketplace.json`）。
+這個 repo 本身是一個 marketplace（`.claude-plugin/marketplace.json`）。
+
+從 GitHub 安裝：
+
+```bash
+claude plugin marketplace add evanz1215/doit-workflow
+```
+
+或從本機 clone 安裝（開發時用，改檔後 `/reload-plugins` 即生效）：
 
 ```bash
 claude plugin marketplace add D:/Project/repos/ai-agent-workflow
