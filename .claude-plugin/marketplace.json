@@ -8,7 +8,7 @@
     {
       "name": "doit",
       "source": "./doit",
-      "description": "依風險分級的開發工作流（v0.1：低／中風險、brownfield、一般模式）"
+      "description": "依風險分級的開發工作流（v0.2：低／中／高風險、brownfield、一般模式）"
     }
   ]
 }

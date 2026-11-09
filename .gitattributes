@@ -1,0 +1,2 @@
+# 所有文字檔在 repo 內一律 LF；Windows 簽出也保持 LF（node 腳本與 markdown 都不需要 CRLF）
+* text=auto eol=lf

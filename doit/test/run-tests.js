@@ -133,6 +133,31 @@ check('[證據 基準] 是合法標籤', runLog(['[證據 基準] npm test 無�
 check('[證據 標準1 基準側] 編號後接說明是合法標籤', runLog(['[證據 標準1 基準側] 修改前 build 出 CS0649'], tmp).code === 0);
 check('[證據 標準2（修改後）] 全形括號說明是合法標籤', runLog(['[證據 標準2（修改後）] 0 個 CS0649'], tmp).code === 0);
 check('[證據 隨便] 仍被拒', runLog(['[證據 隨便] x'], tmp).code !== 0);
+check('[審查 plan-critic @v1] 是合法標籤', runLog(['[審查 plan-critic @v1] 結論：可送批准'], tmp).code === 0);
+check('[審查 verifier @abc1234] 是合法標籤', runLog(['[審查 verifier @abc1234] 結論：通過', '[審查 verifier] [major] 邊界輸入 null 靜默吞錯 → 已修正'], tmp).code === 0);
+check('[審查] 沒有審查者名稱被拒', runLog(['[審查] 結論：可合併'], tmp).code !== 0);
+check('--help 列出 plan-critic 與 verifier 標籤', /plan-critic/.test(help.out) && /verifier/.test(help.out));
+
+console.log('\n[4b] agents：三個審查類 subagent 都存在且只讀');
+for (const [agent, mustHave] of [['reviewer', '輸出格式'], ['plan-critic', '需求覆蓋'], ['verifier', '邊界輸入']]) {
+  const p = path.join(PLUGIN, 'agents', `${agent}.md`);
+  const exists = fs.existsSync(p);
+  check(`agents/${agent}.md 存在`, exists);
+  if (!exists) continue;
+  const text = fs.readFileSync(p, 'utf8');
+  const fm = text.match(/^---\n([\s\S]*?)\n---/);
+  const nameLine = fm && fm[1].match(/^name:\s*(.+)$/m);
+  const toolsLine = fm && fm[1].match(/^tools:\s*(.+)$/m);
+  check(`${agent} frontmatter name 一致`, nameLine && nameLine[1].trim() === agent);
+  check(`${agent} 工具不含 Edit/Write`, toolsLine && !/\b(Edit|Write|MultiEdit|NotebookEdit)\b/.test(toolsLine[1]));
+  check(`${agent} 內容含「${mustHave}」`, text.includes(mustHave));
+}
+const skillText = fs.readFileSync(path.join(PLUGIN, 'skills', 'doit', 'SKILL.md'), 'utf8');
+check('SKILL.md 提到 doit:plan-critic 與 doit:verifier', /doit:plan-critic/.test(skillText) && /doit:verifier/.test(skillText));
+check('SKILL.md 不再說高風險關卡尚未實作', !/高風險專屬關卡（plan-critic/.test(skillText));
+for (const ref of ['tiering', 'plan-format', 'review', 'retro', 'ui-verify']) {
+  check(`references/${ref}.md 存在且 SKILL.md 有引用`, fs.existsSync(path.join(PLUGIN, 'skills', 'doit', 'references', `${ref}.md`)) && skillText.includes(`references/${ref}.md`));
+}
 const lp = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-001 測試教訓\n- 預防規則：x\n' });
 check('--lesson project 寫入專案教訓檔', lp.status === 0 && /P-001 測試教訓/.test(fs.readFileSync(path.join(tmp, STATE, 'LESSONS.md'), 'utf8')), lp.stderr);
 const lp2 = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-002 第二條\n' });

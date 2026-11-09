@@ -1,7 +1,7 @@
 {
   "name": "doit",
-  "version": "0.1.0",
-  "description": "依風險分級的開發工作流：探索 → 釐清 → 計畫落檔 → 批准 → 實作 → 驗證 → 獨立審查 → commit → 檢討。v0.1 支援低／中風險、brownfield、一般模式；硬規則由 hooks 強制。",
+  "version": "0.2.0",
+  "description": "依風險分級的開發工作流：探索 → 釐清 → 計畫落檔 → 批准 → 實作 → 驗證 → 獨立審查 → commit → 檢討。v0.2 支援低／中／高風險、brownfield、一般模式；高風險加 plan-critic、verifier 與瀏覽器驗證；硬規則由 hooks 強制。",
   "author": {
     "name": "Evan"
   },
