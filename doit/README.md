@@ -45,13 +45,13 @@ node doit/test/run-tests.js
 3. 在沙盒目錄執行一個任務，紀錄存成 jsonl：
 
    ```
-   claude -p "/doit:doit <開發指令>" --output-format stream-json --verbose --permission-mode acceptEdits --allowedTools "Bash(node:*)" "Bash(git:*)" "Bash(npm:*)" "Agent" > run1.jsonl
+   claude -p "/doit:doit <開發指令>" --output-format stream-json --verbose --permission-mode acceptEdits --allowedTools "Read" "Grep" "Glob" "Edit" "Write" "Agent" "Bash(git:*)" "Bash(npm test:*)" "Bash(node:*)" > run1.jsonl
    ```
 
    流程走到「待批准」會停下。從 jsonl 取出 `session_id`，再以同一個 session 回覆批准：
 
    ```
-   claude -p --resume <session_id> "確認，照計畫做" --output-format stream-json --verbose --permission-mode acceptEdits --allowedTools "Bash(node:*)" "Bash(git:*)" "Bash(npm:*)" "Agent" > run2.jsonl
+   claude -p --resume <session_id> "確認，照計畫做" --output-format stream-json --verbose --permission-mode acceptEdits --allowedTools "Read" "Grep" "Glob" "Edit" "Write" "Agent" "Bash(git:*)" "Bash(npm test:*)" "Bash(node:*)" > run2.jsonl
    ```
 
 4. 用 `node doit/test/analyze-log.js run2.jsonl` 列出每個工具呼叫、subagent 呼叫、hook 擋下與最終結果，逐階段對照 `skills/doit/SKILL.md` 稽核有沒有照流程走（四拍順序、審查 prompt 內容、交付 commit 前有沒有先改狀態）。
