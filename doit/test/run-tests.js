@@ -173,7 +173,7 @@ check('implementer frontmatter name 一致', /^name:\s*implementer\s*$/m.test(im
 check('implementer 工具含 Edit、Write、Bash', ['Edit', 'Write', 'Bash'].every((t) => new RegExp(`^tools:.*\\b${t}\\b`, 'm').test(implFm)));
 check('implementer 寫明不 commit、不碰 .doit/、有輸出格式', /不做任何 `git commit`/.test(implText) && /不讀寫 `\.doit\/`/.test(implText) && implText.includes('輸出格式'));
 const skillText = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'SKILL.md'), 'utf8');
-for (const sk of ['go', 'init', 'resume', 'status', 'abort']) {
+for (const sk of ['go', 'ask', 'init', 'resume', 'status', 'abort']) {
   const p = path.join(PLUGIN, 'skills', sk, 'SKILL.md');
   const t = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
   check(`skills/${sk}/SKILL.md 存在且 name 一致`, new RegExp(`^---\\n[\\s\\S]*?^name:\\s*${sk}\\s*$`, 'm').test(t));
@@ -195,6 +195,8 @@ for (const agent of ['plan-critic', 'implementer', 'verifier', 'reviewer']) {
   check(`${agent} 規定 Bash 一次一條指令`, /Bash 一次呼叫只跑一條指令/.test(fs.readFileSync(path.join(PLUGIN, 'agents', `${agent}.md`), 'utf8')));
 }
 check('review.md 規定重審開新的前景呼叫、不用 SendMessage', /不用 SendMessage/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'review.md'), 'utf8')));
+const askText = fs.readFileSync(path.join(PLUGIN, 'skills', 'ask', 'SKILL.md'), 'utf8');
+check('ask 規定只讀、不建任務、有回答格式', /不改任何檔案/.test(askText) && /不建立 doit 任務/.test(askText) && /### 💬 doit:ask/.test(askText));
 check('init 沒參數時用 AskUserQuestion 讓使用者點選', /AskUserQuestion/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'init', 'SKILL.md'), 'utf8')));
 check('resume 指向 go 的主流程', fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8').includes('skills/go/SKILL.md'));
 check('沒有殘留的 /doit:doit', !/\/doit:doit/.test(skillText + fs.readFileSync(path.join(HOOKS, 'session-start.js'), 'utf8')));
