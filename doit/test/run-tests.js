@@ -194,6 +194,8 @@ check('回報要輸出給使用者、headless 也要、先回報再動下一階�
 check('Step 5 回報要直接寫驗證結果', /不要寫「見下一份回報」/.test(skillText));
 check('跳過的階段仍用五欄模板，完成門檻歸 Step 8', /不要改用自由條列/.test(skillText) && /完成門檻檢查是 Step 8 的事/.test(skillText));
 check('交付回報每條驗收標準一行', /\*\*每條驗收標準一行\*\*/.test(skillText));
+const reviewText = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'review.md'), 'utf8');
+check('審查意見分級規則：blocker 必須修、major 可不採納但要列進回報', /## 意見分級怎麼處理/.test(reviewText) && /\*\*必須修\*\*，沒有例外/.test(reviewText) && /\*\*預設要修\*\*/.test(reviewText) && !/blocker \/ major 必須/.test(reviewText + skillText));
 check('步驟數規則涵蓋低風險 1 步', /低風險的單檔改動可以只有 1 步/.test(skillText) && !/2–5 步/.test(skillText));
 check('檢討規則涵蓋高風險（SKILL 與 retro 一致）', /中風險與高風險每次做/.test(skillText) && /中風險與高風險：每次任務完成或中止後/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'retro.md'), 'utf8')));
 check('舊的「回報格式」小節已移除', !/^## 回報格式/m.test(skillText));
@@ -274,6 +276,12 @@ check('wip -am 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEve
 check('wip --message= 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit --message="wip: 步驟 1"'), tmp)));
 check('--set 值含換行被拒', runLog(['--set', '下一步=a\n狀態: 完成'], tmp).code !== 0 && /狀態: 已批准/.test(taskText()));
 check('有進行中任務時 --new 被拒', runLog(['--new', 'another'], tmp).code !== 0 && /add-paging/.test(taskPath()));
+for (const c of ['git switch -c fix/push-id-padding', 'git checkout -b feat/merge-helper', 'git checkout -b fix/commit-msg', 'git log --grep push', 'git branch -d old-merge', 'cat .git/config push']) {
+  check(`子指令不是 push／merge／commit 就放行：${c}`, allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent(c), tmp)));
+}
+for (const c of ['git -C . push', 'git -c user.name=x push origin HEAD', '/usr/bin/git push', 'git.exe merge feat/x', 'git --no-pager commit -m "feat: x"']) {
+  check(`帶全域選項或路徑的 git 仍被擋：${c}`, denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent(c), tmp)));
+}
 check('push 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git push origin feat/x'), tmp)));
 check('merge 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git merge feat/x'), tmp)));
 runLog(['--set', '狀態=實作中'], tmp);

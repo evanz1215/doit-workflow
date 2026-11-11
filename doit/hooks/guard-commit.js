@@ -14,10 +14,29 @@ const cmd = String((input.tool_input || {}).command || '');
 if (!cmd) lib.allow();
 
 const bare = lib.stripShellLiterals(cmd);
-const commits = [...bare.matchAll(/\bgit\b[^|&;\n]*\bcommit\b/g)];
+// 找出每個 git 指令的子指令：git 之後第一個不是選項的字（-C、-c 會多吃一個參數）。
+// 只比對子指令本身，分支名或參數裡的 push／merge／commit（例如 git switch -c fix/push-id）不算。
+function gitCalls(s) {
+  const calls = [];
+  // 前面不能是字元、點、連字號（排除 .git、my-git）；後面不能接路徑或字元（排除 .git/config、github）
+  for (const m of s.matchAll(/(?<![\w.-])git(?:\.exe)?(?![\w./-])([^|&;\n]*)/g)) {
+    const toks = m[1].trim().split(/\s+/).filter(Boolean);
+    let sub = '';
+    for (let i = 0; i < toks.length; i++) {
+      if (toks[i] === '-C' || toks[i] === '-c') { i++; continue; }
+      if (toks[i].startsWith('-')) continue;
+      sub = toks[i];
+      break;
+    }
+    calls.push({ sub, index: m.index });
+  }
+  return calls;
+}
+const calls = gitCalls(bare);
+const commits = calls.filter((c) => c.sub === 'commit');
 const isGitCommit = commits.length > 0;
-const isGitPush = /\bgit\b[^|&;\n]*\bpush\b/.test(bare);
-const isGitMerge = /\bgit\b[^|&;\n]*\bmerge(?!-)\b/.test(bare);
+const isGitPush = calls.some((c) => c.sub === 'push');
+const isGitMerge = calls.some((c) => c.sub === 'merge');
 if (!isGitCommit && !isGitPush && !isGitMerge) lib.allow();
 
 const cwd = input.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd();
