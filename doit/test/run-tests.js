@@ -152,10 +152,16 @@ for (const [agent, mustHave] of [['reviewer', '輸出格式'], ['plan-critic', '
   check(`${agent} 工具不含 Edit/Write`, toolsLine && !/\b(Edit|Write|MultiEdit|NotebookEdit)\b/.test(toolsLine[1]));
   check(`${agent} 內容含「${mustHave}」`, text.includes(mustHave));
 }
+const implText = fs.readFileSync(path.join(PLUGIN, 'agents', 'implementer.md'), 'utf8');
+const implFm = (implText.match(/^---\n([\s\S]*?)\n---/) || [])[1] || '';
+check('implementer frontmatter name 一致', /^name:\s*implementer\s*$/m.test(implFm));
+check('implementer 工具含 Edit、Write、Bash', ['Edit', 'Write', 'Bash'].every((t) => new RegExp(`^tools:.*\\b${t}\\b`, 'm').test(implFm)));
+check('implementer 寫明不 commit、不碰 .doit/、有輸出格式', /不做任何 `git commit`/.test(implText) && /不讀寫 `\.doit\/`/.test(implText) && implText.includes('輸出格式'));
 const skillText = fs.readFileSync(path.join(PLUGIN, 'skills', 'doit', 'SKILL.md'), 'utf8');
+check('SKILL.md 階段 5 派 doit:implementer，不再說尚未實作', /doit:implementer/.test(skillText) && !/implementer」?尚未實作/.test(skillText));
 check('SKILL.md 提到 doit:plan-critic 與 doit:verifier', /doit:plan-critic/.test(skillText) && /doit:verifier/.test(skillText));
 check('SKILL.md 不再說高風險關卡尚未實作', !/高風險專屬關卡（plan-critic/.test(skillText));
-for (const ref of ['tiering', 'plan-format', 'review', 'retro', 'ui-verify']) {
+for (const ref of ['tiering', 'plan-format', 'implement', 'review', 'retro', 'ui-verify']) {
   check(`references/${ref}.md 存在且 SKILL.md 有引用`, fs.existsSync(path.join(PLUGIN, 'skills', 'doit', 'references', `${ref}.md`)) && skillText.includes(`references/${ref}.md`));
 }
 const lp = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-001 測試教訓\n- 預防規則：x\n' });

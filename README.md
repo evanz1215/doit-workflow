@@ -7,7 +7,7 @@
 
 ## `doit/`：Claude Code plugin（v0.2）
 
-v0.2 範圍：低／中／高風險、brownfield、一般模式、plan-critic／verifier／reviewer、瀏覽器 UI 驗證、hooks 擋改檔與 commit、任務檔、接續。
+v0.2 範圍：低／中／高風險、brownfield、一般模式、plan-critic／implementer／verifier／reviewer、瀏覽器 UI 驗證、hooks 擋改檔與 commit、任務檔、接續。
 
 hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔（`sed -i`、重導向）、`bash -c "git push"`、`gh pr merge` 都擋不到。
 
@@ -15,8 +15,8 @@ hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔（`sed -i`、
 doit/
   .claude-plugin/plugin.json
   skills/doit/SKILL.md              主流程
-  skills/doit/references/           tiering / plan-format / review / ui-verify / retro
-  agents/                         plan-critic / verifier / reviewer 三個 subagent
+  skills/doit/references/           tiering / plan-format / implement / review / ui-verify / retro
+  agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                四個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
   hooks/guard-commit.js           未完成不得交付 commit / push / merge

@@ -11,7 +11,7 @@
 |---|---|
 | 指令 `/doit …` | `/doit:doit …`；`new`、`auto`、`retro` 子指令尚未實作 |
 | 低風險批准可免 | 一律必須批准；免批准要等 v0.3 無人看管模式 |
-| 高風險每步 fresh `doit:implementer` | 尚未實作，在主 context 做，改以每步回報補償 |
+| 高風險每步 fresh `doit:implementer` 做完回報 | 已實作（v0.2.1）；implementer 只做改檔與驗證，紀錄與 wip commit 由主 context 核對後做 |
 | 審查在背景 subagent 跑 | 前景執行，等結果回來 |
 | 迭代上限 hook、任務檔「迭代」欄 | 尚未實作（v0.3） |
 | Stop hook 檢查「下一步」為空或與狀態不符 | 只檢查為空，且只在這個 session 動過任務時才擋 |
@@ -327,12 +327,13 @@ doit/
       tiering.md
       plan-format.md
       review.md
+      implement.md
       ui-verify.md
       unattended.md             # v0.3，尚未建立
       retro.md
   agents/
     plan-critic.md
-    implementer.md              # 尚未建立
+    implementer.md
     verifier.md
     reviewer.md
   hooks/

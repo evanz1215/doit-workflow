@@ -41,7 +41,7 @@
 | 探索 | 輕量 | 完整（呼叫者、既有測試） | 同中，另列影響範圍清單 |
 | 計畫 | 簡版：做法 + 驗收標準 + 驗證方式 | 完整 | 完整 + 送批准前過 plan-critic |
 | 批准 | 必須（v0.3 無人看管模式才可免） | 必須 | 必須（請求附 plan-critic 結論） |
-| 實作 | 主 context，可不做檢查點 | 每步檢查點 commit | 每步檢查點 commit，每步回報（fresh implementer 尚未實作） |
+| 實作 | 主 context，可不做檢查點 | 每步檢查點 commit | 每步派 fresh implementer，主 context 核對後做檢查點 commit，每步回報 |
 | 驗證 | 相關測試 | 相關測試 + UI 實測 | 全部測試 + UI 實測 |
 | 審查 | 無 | reviewer | verifier（實跑）→ reviewer |
 | 檢討 | 有錯誤時 | 必做 | 必做 |

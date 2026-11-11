@@ -10,7 +10,7 @@ argument-hint: <開發指令 | resume | status | abort>
 
 **語言**：所有回報、計畫、任務檔紀錄、commit 訊息一律繁體中文（程式碼與指令除外）。
 
-**v0.2 範圍**：低／中／高風險、brownfield、一般模式。高風險多三道關卡：計畫送批准前先過 `doit:plan-critic`、審查時先 `doit:verifier` 實跑再 `doit:reviewer`、有 UI 改動時依 `references/ui-verify.md` 用內建瀏覽器實測。高風險的「每步 fresh implementer」尚未實作，實作仍在主 context 做，改以每步回報補償。`auto`、`new` 子指令尚未實作，收到時告知並改走一般模式。
+**v0.2 範圍**：低／中／高風險、brownfield、一般模式。高風險多四道關卡：計畫送批准前先過 `doit:plan-critic`、實作每步派一個 fresh `doit:implementer`、審查時先 `doit:verifier` 實跑再 `doit:reviewer`、有 UI 改動時依 `references/ui-verify.md` 用內建瀏覽器實測。`auto`、`new` 子指令尚未實作，收到時告知並改走一般模式。
 
 指令：$ARGUMENTS
 
@@ -53,6 +53,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 |---|---|
 | `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/tiering.md` | 階段 2 初判、階段 3 定級、實作中懷疑要升級時 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/plan-format.md` | 階段 3 寫計畫前；接續時 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/implement.md` | 階段 5 高風險開始實作前；高風險任務接續在「實作中」時 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/review.md` | 階段 3 高風險送 plan-critic 前；階段 7 審查；階段 8 完成門檻 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/ui-verify.md` | 階段 3 寫 UI 類驗收標準時；階段 6 有 UI 改動要驗證時 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/retro.md` | 階段 9 檢討 |
@@ -131,9 +132,10 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
   第 2 拍沒過就不進第 3 拍；第 4 拍沒做完就不碰下一步的檔案。不要「順手先寫下一步的測試」，也不要把 commit 排在驗證前面。接續時靠的是紀錄與 commit 的順序和實際一致。
 - 碰到計畫沒涵蓋的情況：小偏差記 `[紀錄]` 繼續；要改做法、範圍、資料結構的，停下來重提計畫（回階段 3）。
 - 實作中發現影響超出定級（例如要改有呼叫者的函式、要動 schema）：`[升級]` 記下，依 `tiering.md` 升級，告知使用者。
-- 同一步驗證連續失敗 3 次 → 停，記 `[錯誤]`，回報使用者，不再硬試。
+- 同一步驗證連續失敗 3 次 → 停，記 `[錯誤]`，回報使用者，不再硬試。高風險時 implementer 回報的失敗與你核對不過各算一次，重派不重設計數。
 - 每步更新「下一步」。
-- **高風險每步回報**：四拍做完就用 3 行告訴使用者這一步改了什麼、驗證結果、下一步，不等使用者回覆就繼續（這是補償「每步 fresh implementer」尚未實作的透明度，不是批准點）。
+- **高風險每步派 fresh implementer**：先讀 `references/implement.md`。第 1、2 拍交給 `doit:implementer` subagent（前景執行，每步一個新的，一次只派一個），輸入只有這一步的做什麼／改哪些檔案／驗證、對應的驗收標準、相關假設、前面步驟的產出、範圍外、專案慣例，**不給對話與你的推理**。它不 commit、不寫任務檔。回來後你自己核對（改到的檔案都在清單內、重跑驗證通過、測試斷言有效）才做第 3、4 拍；沒過就再派一個新的，不自己下場改。
+- **高風險每步回報**：四拍做完就用 3 行告訴使用者這一步改了什麼、驗證結果、下一步，不等使用者回覆就繼續（這是透明度，不是批准點）。
 
 ## 階段 6：驗證
 
