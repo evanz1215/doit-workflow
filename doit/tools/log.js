@@ -273,7 +273,7 @@ function readConfig(root) {
   let saved;
   try { saved = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { saved = null; }
   const ok = saved && typeof saved === 'object' && !Array.isArray(saved) &&
-    Object.entries(saved).every(([k, v]) => k in CONFIG_DEFAULTS && (v === 'on' || v === 'off'));
+    Object.entries(saved).every(([k, v]) => Object.hasOwn(CONFIG_DEFAULTS, k) && (v === 'on' || v === 'off'));
   if (!ok) die(`設定檔格式錯誤：${lib.normalize(p)}（只能有 ${Object.keys(CONFIG_DEFAULTS).join('、')}，值是 on 或 off；刪掉它就會回到預設值）`);
   return { ...CONFIG_DEFAULTS, ...saved };
 }
@@ -282,7 +282,8 @@ function configCmd(root, pairs) {
   const cfg = readConfig(root);
   for (const kv of pairs) {
     const m = kv.match(/^(\w+)=(on|off)$/);
-    if (!m || !(m[1] in CONFIG_DEFAULTS)) die(`設定格式不符：${kv}（可用：${Object.keys(CONFIG_DEFAULTS).map((k) => `${k}=on|off`).join('、')}）`);
+    // 用 hasOwn 而不是 in：in 會把 toString 這類原型上的名稱也當成合法的鍵
+    if (!m || !Object.hasOwn(CONFIG_DEFAULTS, m[1])) die(`設定格式不符：${kv}（可用：${Object.keys(CONFIG_DEFAULTS).map((k) => `${k}=on|off`).join('、')}）`);
     cfg[m[1]] = m[2];
   }
   if (cfg.pr === 'on' && cfg.commit === 'off') die('pr=on 需要 commit=on：開 PR 前要先有 commit');

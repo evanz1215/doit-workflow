@@ -91,6 +91,10 @@ check('commit=off 時 pr=on 被拒且設定不變', runLog(['--config', 'pr=on']
 check('同一次 commit=on pr=on 可以', runLog(['--config', 'commit=on', 'pr=on'], tmp).code === 0 && /pr: on/.test(runLog(['--config'], tmp).out));
 check('未知的鍵被拒', runLog(['--config', 'push=on'], tmp).code !== 0);
 check('值不是 on/off 被拒', runLog(['--config', 'commit=yes'], tmp).code !== 0);
+check('原型上的名稱（toString）不是合法的鍵，且沒寫進設定檔', runLog(['--config', 'toString=on'], tmp).code !== 0 && !Object.hasOwn(JSON.parse(fs.readFileSync(cfgPath, 'utf8')), 'toString'));
+fs.writeFileSync(cfgPath, '{"toString":"on"}');
+check('設定檔裡有原型上的名稱時報錯', runLog(['--config'], tmp).code !== 0);
+fs.writeFileSync(cfgPath, '{"commit":"on","pr":"on"}');
 check('設定檔被 git 排除', git(['status', '--porcelain'], tmp).stdout.trim() === '');
 fs.writeFileSync(cfgPath, '{"commit":"maybe"}');
 check('設定檔內容不合法時報錯', runLog(['--config'], tmp).code !== 0);
@@ -197,6 +201,7 @@ for (const agent of ['plan-critic', 'implementer', 'verifier', 'reviewer']) {
 check('review.md 規定重審開新的前景呼叫、不用 SendMessage', /不用 SendMessage/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'review.md'), 'utf8')));
 const askText = fs.readFileSync(path.join(PLUGIN, 'skills', 'ask', 'SKILL.md'), 'utf8');
 check('ask 規定只讀、不建任務、有回答格式', /不改任何檔案/.test(askText) && /不建立 doit 任務/.test(askText) && /### 💬 doit:ask/.test(askText));
+check('ask 固定欄位只有依據與不確定的地方，其餘適用時才出現', /\*\*只在適用時出現\*\*/.test(askText) && /- \*\*依據\*\*/.test(askText) && /- \*\*不確定的地方\*\*/.test(askText) && /順帶發現/.test(askText));
 check('init 沒參數時用 AskUserQuestion 讓使用者點選', /AskUserQuestion/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'init', 'SKILL.md'), 'utf8')));
 check('resume 指向 go 的主流程', fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8').includes('skills/go/SKILL.md'));
 check('沒有殘留的 /doit:doit', !/\/doit:doit/.test(skillText + fs.readFileSync(path.join(HOOKS, 'session-start.js'), 'utf8')));
