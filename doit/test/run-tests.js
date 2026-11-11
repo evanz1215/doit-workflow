@@ -80,6 +80,21 @@ console.log('\n[2] log.js --help / --new');
 const help = runLog(['--help'], tmp);
 check('--help 成功且有用法', help.code === 0 && /用法/.test(help.out));
 check('不認識的選項被拒', runLog(['--bogus'], tmp).code !== 0);
+
+console.log('\n[2a] log.js --config');
+const cfgPath = path.join(tmp, STATE, 'config.json');
+const c0 = runLog(['--config'], tmp);
+check('沒有設定檔時印出預設值且不建檔', c0.code === 0 && /commit: on（預設）/.test(c0.out) && /pr: off（預設）/.test(c0.out) && !fs.existsSync(cfgPath), c0.out + c0.err);
+const c1 = runLog(['--config', 'commit=off'], tmp);
+check('commit=off 寫入設定檔', c1.code === 0 && JSON.parse(fs.readFileSync(cfgPath, 'utf8')).commit === 'off', c1.err);
+check('commit=off 時 pr=on 被拒且設定不變', runLog(['--config', 'pr=on'], tmp).code !== 0 && JSON.parse(fs.readFileSync(cfgPath, 'utf8')).pr === 'off');
+check('同一次 commit=on pr=on 可以', runLog(['--config', 'commit=on', 'pr=on'], tmp).code === 0 && /pr: on/.test(runLog(['--config'], tmp).out));
+check('未知的鍵被拒', runLog(['--config', 'push=on'], tmp).code !== 0);
+check('值不是 on/off 被拒', runLog(['--config', 'commit=yes'], tmp).code !== 0);
+check('設定檔被 git 排除', git(['status', '--porcelain'], tmp).stdout.trim() === '');
+fs.writeFileSync(cfgPath, '{"commit":"maybe"}');
+check('設定檔內容不合法時報錯', runLog(['--config'], tmp).code !== 0);
+fs.rmSync(cfgPath);
 const n = runLog(['--new', 'Add Paging', '--set', '類型=feat', '--set', 'base=main', '--set', '下一步=探索'], tmp);
 check('建立成功', n.code === 0, n.err);
 check('ACTIVE 存在', fs.existsSync(path.join(tmp, STATE, 'ACTIVE')));
@@ -158,7 +173,7 @@ check('implementer frontmatter name 一致', /^name:\s*implementer\s*$/m.test(im
 check('implementer 工具含 Edit、Write、Bash', ['Edit', 'Write', 'Bash'].every((t) => new RegExp(`^tools:.*\\b${t}\\b`, 'm').test(implFm)));
 check('implementer 寫明不 commit、不碰 .doit/、有輸出格式', /不做任何 `git commit`/.test(implText) && /不讀寫 `\.doit\/`/.test(implText) && implText.includes('輸出格式'));
 const skillText = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'SKILL.md'), 'utf8');
-for (const sk of ['go', 'resume', 'status', 'abort']) {
+for (const sk of ['go', 'init', 'resume', 'status', 'abort']) {
   const p = path.join(PLUGIN, 'skills', sk, 'SKILL.md');
   const t = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
   check(`skills/${sk}/SKILL.md 存在且 name 一致`, new RegExp(`^---\\n[\\s\\S]*?^name:\\s*${sk}\\s*$`, 'm').test(t));
@@ -170,6 +185,7 @@ STAGE_EMOJI.forEach((e, n) => {
   const sec = (skillText.split(new RegExp(`^## 階段 ${n}：`, 'm'))[1] || '').split(/^## /m)[0];
   check(`階段 ${n} 段落結尾有回報指示`, /^- \*\*回報\*\*：/m.test(sec) && (sec.includes(`${e} Step ${n}`) || n === 5));
 });
+check('SKILL.md 階段 0 讀設定，階段 8 依 commit／pr 設定交付', /log\.js" --config/.test(skillText) && /\*\*`commit=off`\*\*/.test(skillText) && /`pr=off`（預設）/.test(skillText) && !/有 CI 設定（`\.github/.test(skillText));
 check('舊的「回報格式」小節已移除', !/^## 回報格式/m.test(skillText));
 for (const agent of ['plan-critic', 'implementer', 'verifier', 'reviewer']) {
   check(`${agent} 規定 Bash 一次一條指令`, /Bash 一次呼叫只跑一條指令/.test(fs.readFileSync(path.join(PLUGIN, 'agents', `${agent}.md`), 'utf8')));

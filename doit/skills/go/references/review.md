@@ -120,7 +120,7 @@ reviewer 回傳的每條意見分 blocker / major / minor。
 | 3 | 審查沒有未處理的 blocker / major（低風險無此項；中風險看 reviewer；高風險 verifier 與 reviewer 兩者都要） | 看最後一組 `[審查 reviewer]`（高風險加 `[審查 verifier]`）行 |
 | 4 | 工作目錄沒有計畫沒提到的檔案變更 | `git status --porcelain` 與 `git diff --stat <起始SHA>` 逐檔對照實作步驟表 |
 
-門檻過了：`--set 狀態=完成 --set "下一步=無（已完成）"` → 交付 commit（有未 commit 變更就含進去；沒有就 `--allow-empty`；不改寫既有 wip）→ 有 CI 就開 PR，沒有就回報分支名。
+門檻過了：`--set 狀態=完成 --set "下一步=無（已完成）"` → 依設定交付（見 SKILL.md 階段 8）：`commit=on` 做交付 commit（有未 commit 變更就含進去；沒有就 `--allow-empty`；不改寫既有 wip），`commit=off` 不 commit、列出變更檔案 → `pr=on` 才 push 並開 PR，否則回報分支名。
 
 交付回報必須逐條列出任務檔所有 `[範圍外]` 行與計畫「範圍外」節的項目，使用者才知道什麼沒做。這是回報的義務，不是改狀態前的門檻（回報發生在門檻之後，不可能先成立）。
 

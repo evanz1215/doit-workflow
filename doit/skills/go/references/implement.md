@@ -13,7 +13,7 @@
 | 1 改這一步列的檔案 | implementer |
 | 2 跑這一步的驗證 | implementer，主 context 核對時再跑一次 |
 | 3 記 `[完成]`、`[證據]`、更新「下一步」 | 主 context |
-| 4 `wip:` 檢查點 commit | 主 context |
+| 4 `wip:` 檢查點 commit（設定 `commit=off` 時略過） | 主 context |
 
 implementer 不 commit、不寫任務檔。紀錄與 commit 的順序仍由主 context 掌握，接續時才對得上。
 

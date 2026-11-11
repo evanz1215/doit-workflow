@@ -19,6 +19,7 @@
 /doit:resume         接續未完成任務
 /doit:status         看狀態
 /doit:abort [原因]   中止（會先確認）
+/doit:init           設定：commit=on|off（預設 on）、pr=on|off（預設 off）
 ```
 
 任務狀態放在目標專案的 `.doit/`，由 `tools/log.js` 寫入，不進 git。

@@ -18,6 +18,8 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --lessons                                印出專案與全域教訓檔內容
   node log.js --lesson project|global < 內容            把一條教訓（stdin，markdown）追加到專案或全域教訓檔
   node log.js --lesson-bump project|global <編號> [--hit]  既有教訓再犯：犯錯次數 +1（--hit 則遇到次數 +1），「最近」改成今天
+  node log.js --config                                 印出目前設定（沒有設定檔時是預設值）
+  node log.js --config commit=on|off pr=on|off         修改設定，寫進 .doit/config.json
   node log.js --help                                   這份說明
 
 教訓檔位置：專案 <repo>/.doit/LESSONS.md；全域 ~/.doit/LESSONS.md（兩者都不在 .claude/ 下，不會被擋）。
@@ -50,6 +52,10 @@ const HELP = `log.js：doit 任務檔寫入工具
   [範圍外] …
   [停止] …
 
+設定（--config）：
+  commit    on（預設）| off   off 時不做 wip 檢查點與交付 commit，變更留在工作目錄
+  pr        off（預設）| on   on 時完成後 push 並開 PR；需要 commit=on
+
 紀錄行會自動加上時間戳，並插入「## 紀錄」小節尾端（在 ## 計畫 vN 之前）。
 `;
 
@@ -79,13 +85,16 @@ const DEFAULT_FIELDS = [
 
 const LOG_HEADING = '## 紀錄';
 
+const CONFIG_FILE = 'config.json';
+const CONFIG_DEFAULTS = { commit: 'on', pr: 'off' };
+
 function die(msg) {
   process.stderr.write(`log.js: ${msg}\n`);
   process.exit(1);
 }
 
 function parseArgs(argv) {
-  const out = { sets: [], lines: [], new: null, show: false, close: null, help: false, lessons: false, lesson: null, bump: null, hit: false };
+  const out = { sets: [], lines: [], new: null, show: false, close: null, help: false, lessons: false, lesson: null, bump: null, hit: false, config: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--set') {
@@ -109,6 +118,8 @@ function parseArgs(argv) {
       if (!['project', 'global'].includes(scope)) die('--lesson-bump 需要 project 或 global');
       if (!id || !/^[GP]-\d+$/.test(id)) die('--lesson-bump 需要教訓編號，例如 G-001 或 P-002');
       out.bump = { scope, id };
+    } else if (a === '--config') {
+      out.config = true;
     } else if (a === '--hit') {
       out.hit = true;
     } else if (a === '--help' || a === '-h') {
@@ -255,6 +266,38 @@ function appendLesson(root, scope) {
   process.stdout.write(`已追加到 ${lib.normalize(target)}\n`);
 }
 
+// 設定檔只存 on/off 字串；缺的鍵用預設值補
+function readConfig(root) {
+  const p = path.join(lib.wfDir(root), CONFIG_FILE);
+  if (!fs.existsSync(p)) return { ...CONFIG_DEFAULTS };
+  let saved;
+  try { saved = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { saved = null; }
+  const ok = saved && typeof saved === 'object' && !Array.isArray(saved) &&
+    Object.entries(saved).every(([k, v]) => k in CONFIG_DEFAULTS && (v === 'on' || v === 'off'));
+  if (!ok) die(`設定檔格式錯誤：${lib.normalize(p)}（只能有 ${Object.keys(CONFIG_DEFAULTS).join('、')}，值是 on 或 off；刪掉它就會回到預設值）`);
+  return { ...CONFIG_DEFAULTS, ...saved };
+}
+
+function configCmd(root, pairs) {
+  const cfg = readConfig(root);
+  for (const kv of pairs) {
+    const m = kv.match(/^(\w+)=(on|off)$/);
+    if (!m || !(m[1] in CONFIG_DEFAULTS)) die(`設定格式不符：${kv}（可用：${Object.keys(CONFIG_DEFAULTS).map((k) => `${k}=on|off`).join('、')}）`);
+    cfg[m[1]] = m[2];
+  }
+  if (cfg.pr === 'on' && cfg.commit === 'off') die('pr=on 需要 commit=on：開 PR 前要先有 commit');
+  const p = path.join(lib.wfDir(root), CONFIG_FILE);
+  if (pairs.length) {
+    fs.mkdirSync(lib.wfDir(root), { recursive: true });
+    ensureExcluded(root);
+    fs.writeFileSync(p, JSON.stringify(cfg, null, 2) + '\n');
+  }
+  for (const k of Object.keys(CONFIG_DEFAULTS)) {
+    process.stdout.write(`${k}: ${cfg[k]}${cfg[k] === CONFIG_DEFAULTS[k] ? '（預設）' : ''}\n`);
+  }
+  process.stdout.write(`檔案: ${lib.normalize(path.relative(root, p))}${fs.existsSync(p) ? '' : '（不存在，使用預設值）'}\n`);
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { process.stdout.write(HELP); return; }
@@ -263,6 +306,7 @@ function main() {
   if (!root) die(`找不到專案根目錄（沒有 .git 也沒有 ${lib.WF_DIR}/ACTIVE）`);
   const dir = lib.wfDir(root);
 
+  if (args.config) { configCmd(root, args.lines); return; }
   if (args.lessons) { printLessons(root); return; }
   if (args.lesson) { appendLesson(root, args.lesson); return; }
   if (args.bump) { bumpLesson(root, args.bump.scope, args.bump.id, args.hit); return; }

@@ -16,7 +16,7 @@ doit/
   .claude-plugin/plugin.json
   skills/go/SKILL.md              主流程（/doit:go）
   skills/go/references/           tiering / plan-format / implement / review / ui-verify / retro
-  skills/resume|status|abort/     子指令（/doit:resume、/doit:status、/doit:abort）
+  skills/init|resume|status|abort/  子指令（/doit:init、/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                四個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
@@ -63,6 +63,7 @@ claude --plugin-dir <clone 路徑>/doit
 | `/doit:resume` | 接續未完成任務 |
 | `/doit:status` | 看狀態 |
 | `/doit:abort [原因]` | 中止（會先確認） |
+| `/doit:init [commit=on\|off] [pr=on\|off]` | 專案設定：完成後要不要 commit（預設開）、開 PR（預設關） |
 
 任務狀態放在目標專案的 `.doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。
 
