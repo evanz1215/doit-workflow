@@ -44,7 +44,8 @@ for (const line of lines) {
           agentTypes.set(c.id, i.subagent_type);
           if (REVIEW_AGENT_RE.test(i.subagent_type) && DOIT_FILE_RE.test(String(i.prompt || ''))) promptLeaks.push(i.subagent_type);
         }
-        if (sub && DOIT_DIR_RE.test(JSON.stringify(i))) {
+        // 排除用的寫法是刻意避開，不算碰到：glob "!.doit/**"、git pathspec ":(exclude).doit"、":!.doit"、":^.doit"
+        if (sub && DOIT_DIR_RE.test(JSON.stringify(i).replace(/(?:!|:\(exclude\)|:\^)[^"\s,\\]*\.doit[^"\s,\\]*/g, ''))) {
           subDoitTouches.push(`${agentTypes.get(ev.parent_tool_use_id) || '?'}:${c.name}`);
         }
       } else if (c.type === 'text' && c.text.trim()) {

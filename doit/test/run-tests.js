@@ -284,11 +284,13 @@ fs.writeFileSync(fakeLog, [
   asst([{ type: 'tool_use', id: 'S2', name: 'Read', input: { file_path: 'C:\\scratch\\doit-sandbox\\src\\a.js' } }], 'A1'),
   asst([{ type: 'tool_use', id: 'A2', name: 'Agent', input: { subagent_type: 'doit:verifier', prompt: '## 驗收標準\n| 1 | … |' } }]),
   asst([{ type: 'tool_use', id: 'S3', name: 'Bash', input: { command: 'npm test' } }], 'A2'),
+  asst([{ type: 'tool_use', id: 'S4', name: 'Grep', input: { pattern: 'items', path: 'C:\\p', glob: '!.doit/**' } }], 'A2'),
+  asst([{ type: 'tool_use', id: 'S5', name: 'Bash', input: { command: 'git -C "C:\\p" diff a0347a7 -- . ":(exclude).doit"' } }], 'A2'),
   asst([{ type: 'tool_use', id: 'A3', name: 'Agent', input: { subagent_type: 'doit:implementer', prompt: '不寫 `.doit/tasks` 底下的檔案' } }]),
 ].join('\n') + '\n');
 const an = spawnSync(process.execPath, [path.join(PLUGIN, 'test', 'analyze-log.js'), fakeLog], { encoding: 'utf8' });
 check('審查 prompt 指向任務檔會被算到（implementer 的 prompt 不算）', an.status === 0 && /審查 prompt 指向任務檔：1 次（doit:plan-critic）/.test(an.stdout), an.stdout + an.stderr);
-check('subagent 讀 .doit 會被算到（路徑裡的 doit-sandbox 不算）', /subagent 碰到 \.doit：1 次（doit:plan-critic:Read）/.test(an.stdout), an.stdout);
+check('subagent 讀 .doit 會被算到（路徑裡的 doit-sandbox、排除用的 glob 與 git pathspec 不算）', /subagent 碰到 \.doit：1 次（doit:plan-critic:Read）/.test(an.stdout), an.stdout);
 fs.rmSync(fakeLog, { force: true });
 
 const lp = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-001 測試教訓\n- 預防規則：x\n' });
