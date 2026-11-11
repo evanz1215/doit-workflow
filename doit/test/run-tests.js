@@ -194,6 +194,8 @@ check('回報要輸出給使用者、headless 也要、先回報再動下一階�
 check('Step 5 回報要直接寫驗證結果', /不要寫「見下一份回報」/.test(skillText));
 check('跳過的階段仍用五欄模板，完成門檻歸 Step 8', /不要改用自由條列/.test(skillText) && /完成門檻檢查是 Step 8 的事/.test(skillText));
 check('交付回報每條驗收標準一行', /\*\*每條驗收標準一行\*\*/.test(skillText));
+check('步驟數規則涵蓋低風險 1 步', /低風險的單檔改動可以只有 1 步/.test(skillText) && !/2–5 步/.test(skillText));
+check('檢討規則涵蓋高風險（SKILL 與 retro 一致）', /中風險與高風險每次做/.test(skillText) && /中風險與高風險：每次任務完成或中止後/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'retro.md'), 'utf8')));
 check('舊的「回報格式」小節已移除', !/^## 回報格式/m.test(skillText));
 for (const agent of ['plan-critic', 'implementer', 'verifier', 'reviewer']) {
   check(`${agent} 規定 Bash 一次一條指令`, /Bash 一次呼叫只跑一條指令/.test(fs.readFileSync(path.join(PLUGIN, 'agents', `${agent}.md`), 'utf8')));
