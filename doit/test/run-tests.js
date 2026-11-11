@@ -108,6 +108,13 @@ check('.git/info/exclude 含 .doit/', excl.includes('.doit/'));
 const st = git(['status', '--porcelain'], tmp).stdout;
 check('git status 乾淨（任務檔被排除）', st.trim() === '', st);
 check('--new 重複會失敗', runLog(['--new', 'Add Paging'], tmp).code !== 0);
+const activeBefore = fs.readFileSync(path.join(tmp, STATE, 'ACTIVE'), 'utf8');
+const np = runLog(['--new-plan', 'Big Feature'], tmp);
+const planFiles = fs.existsSync(path.join(tmp, STATE, 'plans')) ? fs.readdirSync(path.join(tmp, STATE, 'plans')) : [];
+check('--new-plan 建立計畫檔骨架', np.code === 0 && planFiles.length === 1 && /-big-feature\.md$/.test(planFiles[0]) && /## 任務清單/.test(fs.readFileSync(path.join(tmp, STATE, 'plans', planFiles[0] || 'x'), 'utf8')), np.err);
+check('--new-plan 不動 ACTIVE，計畫檔被 git 排除', fs.readFileSync(path.join(tmp, STATE, 'ACTIVE'), 'utf8') === activeBefore && git(['status', '--porcelain'], tmp).stdout.trim() === '');
+check('--new-plan 重複會失敗', runLog(['--new-plan', 'Big Feature'], tmp).code !== 0);
+check('--new-plan 沒給 slug 被拒', runLog(['--new-plan'], tmp).code !== 0);
 check('任務檔以「## 紀錄」結尾且有建立行', /## 紀錄\n\[[\d\- :]+\] \[紀錄\] 任務建立\n$/.test(taskText()), JSON.stringify(taskText().slice(-80)));
 
 console.log('\n[3] 探索中：擋改檔、擋 commit、擋 stop（下一步空）');
@@ -177,7 +184,7 @@ check('implementer frontmatter name 一致', /^name:\s*implementer\s*$/m.test(im
 check('implementer 工具含 Edit、Write、Bash', ['Edit', 'Write', 'Bash'].every((t) => new RegExp(`^tools:.*\\b${t}\\b`, 'm').test(implFm)));
 check('implementer 寫明不 commit、不碰 .doit/、有輸出格式', /不做任何 `git commit`/.test(implText) && /不讀寫 `\.doit\/`/.test(implText) && implText.includes('輸出格式'));
 const skillText = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'SKILL.md'), 'utf8');
-for (const sk of ['go', 'ask', 'init', 'resume', 'status', 'abort']) {
+for (const sk of ['go', 'ask', 'plan', 'init', 'resume', 'status', 'abort']) {
   const p = path.join(PLUGIN, 'skills', sk, 'SKILL.md');
   const t = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
   check(`skills/${sk}/SKILL.md 存在且 name 一致`, new RegExp(`^---\\n[\\s\\S]*?^name:\\s*${sk}\\s*$`, 'm').test(t));
@@ -206,6 +213,12 @@ check('review.md 規定重審開新的前景呼叫、不用 SendMessage', /不�
 const askText = fs.readFileSync(path.join(PLUGIN, 'skills', 'ask', 'SKILL.md'), 'utf8');
 check('ask 規定只讀、不建任務、有回答格式', /不改任何檔案/.test(askText) && /不建立 doit 任務/.test(askText) && /### 💬 doit:ask/.test(askText));
 check('ask 固定欄位只有依據與不確定的地方，其餘適用時才出現', /\*\*只在適用時出現\*\*/.test(askText) && /- \*\*依據\*\*/.test(askText) && /- \*\*不確定的地方\*\*/.test(askText) && /順帶發現/.test(askText));
+const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
+check('plan 規定只規劃不實作、用 --new-plan 建檔、指令帶計畫檔路徑', /不改專案檔案/.test(planText) && /不建立 doit 任務/.test(planText) && /--new-plan/.test(planText) && /\/doit:go 依 \.doit\/plans\//.test(planText));
+check('go 認得計畫檔：階段 0 讀它、完成時更新任務狀態', /指令提到計畫檔/.test(skillText) && /任務來自計畫檔時/.test(skillText));
+const planFmt = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'plan-format.md'), 'utf8');
+check('計畫格式有「需要你決定」與假設查證狀態', /### 需要你決定/.test(planFmt) && /已查證：/.test(planFmt) && /未查證：/.test(planFmt));
+check('plan-critic 會查證假設', /\*\*假設查證\*\*/.test(fs.readFileSync(path.join(PLUGIN, 'agents', 'plan-critic.md'), 'utf8')));
 check('init 沒參數時用 AskUserQuestion 讓使用者點選', /AskUserQuestion/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'init', 'SKILL.md'), 'utf8')));
 check('resume 指向 go 的主流程', fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8').includes('skills/go/SKILL.md'));
 check('沒有殘留的 /doit:doit', !/\/doit:doit/.test(skillText + fs.readFileSync(path.join(HOOKS, 'session-start.js'), 'utf8')));

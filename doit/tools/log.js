@@ -18,6 +18,7 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --lessons                                印出專案與全域教訓檔內容
   node log.js --lesson project|global < 內容            把一條教訓（stdin，markdown）追加到專案或全域教訓檔
   node log.js --lesson-bump project|global <編號> [--hit]  既有教訓再犯：犯錯次數 +1（--hit 則遇到次數 +1），「最近」改成今天
+  node log.js --new-plan <slug>                        建立 .doit/plans/<日期>-<slug>.md 骨架並印出路徑（給 /doit:plan 用；不動 ACTIVE）
   node log.js --config                                 印出目前設定（沒有設定檔時是預設值）
   node log.js --config commit=on|off pr=on|off         修改設定，寫進 .doit/config.json
   node log.js --help                                   這份說明
@@ -118,6 +119,9 @@ function parseArgs(argv) {
       if (!['project', 'global'].includes(scope)) die('--lesson-bump 需要 project 或 global');
       if (!id || !/^[GP]-\d+$/.test(id)) die('--lesson-bump 需要教訓編號，例如 G-001 或 P-002');
       out.bump = { scope, id };
+    } else if (a === '--new-plan') {
+      out.newPlan = argv[++i];
+      if (!out.newPlan) die('--new-plan 需要 slug');
     } else if (a === '--config') {
       out.config = true;
     } else if (a === '--hit') {
@@ -299,6 +303,19 @@ function configCmd(root, pairs) {
   process.stdout.write(`檔案: ${lib.normalize(path.relative(root, p))}${fs.existsSync(p) ? '' : '（不存在，使用預設值）'}\n`);
 }
 
+// 計畫檔是 /doit:plan 的產出：把大需求拆成多個 /doit:go 任務。它不是任務檔，不動 ACTIVE，hooks 也不管它。
+function newPlan(root, rawSlug) {
+  const slug = rawSlug.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+  const p = path.join(lib.wfDir(root), 'plans', `${today()}-${slug}.md`);
+  if (fs.existsSync(p)) die(`計畫檔已存在：${lib.normalize(path.relative(root, p))}（要修改就直接編輯它，或換一個 slug）`);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  ensureExcluded(root);
+  const sections = ['需求原文', '現況', '做法', '需要你決定', '假設', '任務清單', '範圍外', '風險與未知', '變更紀錄'];
+  const body = [`# 計畫：${slug}`, '', `- 建立：${lib.nowStamp()}`, '- 狀態：草稿', ...sections.flatMap((s) => ['', `## ${s}`])];
+  fs.writeFileSync(p, body.join('\n') + '\n');
+  process.stdout.write(`已建立 ${lib.normalize(path.relative(root, p))}\n`);
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { process.stdout.write(HELP); return; }
@@ -307,6 +324,7 @@ function main() {
   if (!root) die(`找不到專案根目錄（沒有 .git 也沒有 ${lib.WF_DIR}/ACTIVE）`);
   const dir = lib.wfDir(root);
 
+  if (args.newPlan) { newPlan(root, args.newPlan); return; }
   if (args.config) { configCmd(root, args.lines); return; }
   if (args.lessons) { printLessons(root); return; }
   if (args.lesson) { appendLesson(root, args.lesson); return; }

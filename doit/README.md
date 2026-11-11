@@ -17,6 +17,7 @@
 ```
 /doit:go <開發指令>   新任務
 /doit:ask <問題>      唯讀回答，不改檔、不建任務
+/doit:plan <需求>     把大需求拆成數個任務，寫成計畫檔；只規劃不實作
 /doit:resume         接續未完成任務
 /doit:status         看狀態
 /doit:abort [原因]   中止（會先確認）

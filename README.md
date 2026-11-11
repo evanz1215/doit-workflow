@@ -16,7 +16,7 @@ doit/
   .claude-plugin/plugin.json
   skills/go/SKILL.md              主流程（/doit:go）
   skills/go/references/           tiering / plan-format / implement / review / ui-verify / retro
-  skills/ask|init|resume|status|abort/  子指令（/doit:ask、/doit:init、/doit:resume、/doit:status、/doit:abort）
+  skills/ask|plan|init|resume|status|abort/  其他指令（/doit:ask、/doit:plan、/doit:init、/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                四個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
@@ -61,6 +61,7 @@ claude --plugin-dir <clone 路徑>/doit
 |---|---|
 | `/doit:go <開發指令>` | 新任務 |
 | `/doit:ask <問題>` | 唯讀回答專案相關問題，附來源；不改檔、不建任務 |
+| `/doit:plan <需求>` | 把大需求拆成數個任務，寫成 `.doit/plans/` 下的計畫檔，每個任務附可直接貼的 `/doit:go` 指令；只規劃不實作 |
 | `/doit:resume` | 接續未完成任務 |
 | `/doit:status` | 看狀態 |
 | `/doit:abort [原因]` | 中止（會先確認） |
