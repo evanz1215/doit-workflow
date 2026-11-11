@@ -186,6 +186,7 @@ STAGE_EMOJI.forEach((e, n) => {
   check(`階段 ${n} 段落結尾有回報指示`, /^- \*\*回報\*\*：/m.test(sec) && (sec.includes(`${e} Step ${n}`) || n === 5));
 });
 check('SKILL.md 階段 0 讀設定，階段 8 依 commit／pr 設定交付', /log\.js" --config/.test(skillText) && /\*\*`commit=off`\*\*/.test(skillText) && /`pr=off`（預設）/.test(skillText) && !/有 CI 設定（`\.github/.test(skillText));
+check('回報要輸出給使用者、headless 也要、先回報再動下一階段', /不能只寫在思考裡/.test(skillText) && /headless（`claude -p`）也一樣要回報/.test(skillText) && /\*\*先回報，再動下一個階段\*\*/.test(skillText));
 check('Step 5 回報要直接寫驗證結果', /不要寫「見下一份回報」/.test(skillText));
 check('跳過的階段仍用五欄模板，完成門檻歸 Step 8', /不要改用自由條列/.test(skillText) && /完成門檻檢查是 Step 8 的事/.test(skillText));
 check('交付回報每條驗收標準一行', /\*\*每條驗收標準一行\*\*/.test(skillText));
