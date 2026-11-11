@@ -186,6 +186,9 @@ STAGE_EMOJI.forEach((e, n) => {
   check(`階段 ${n} 段落結尾有回報指示`, /^- \*\*回報\*\*：/m.test(sec) && (sec.includes(`${e} Step ${n}`) || n === 5));
 });
 check('SKILL.md 階段 0 讀設定，階段 8 依 commit／pr 設定交付', /log\.js" --config/.test(skillText) && /\*\*`commit=off`\*\*/.test(skillText) && /`pr=off`（預設）/.test(skillText) && !/有 CI 設定（`\.github/.test(skillText));
+check('Step 5 回報要直接寫驗證結果', /不要寫「見下一份回報」/.test(skillText));
+check('跳過的階段仍用五欄模板，完成門檻歸 Step 8', /不要改用自由條列/.test(skillText) && /完成門檻檢查是 Step 8 的事/.test(skillText));
+check('交付回報每條驗收標準一行', /\*\*每條驗收標準一行\*\*/.test(skillText));
 check('舊的「回報格式」小節已移除', !/^## 回報格式/m.test(skillText));
 for (const agent of ['plan-critic', 'implementer', 'verifier', 'reviewer']) {
   check(`${agent} 規定 Bash 一次一條指令`, /Bash 一次呼叫只跑一條指令/.test(fs.readFileSync(path.join(PLUGIN, 'agents', `${agent}.md`), 'utf8')));

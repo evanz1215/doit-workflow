@@ -3,6 +3,7 @@
 // 用法：node doit/test/analyze-log.js <run.jsonl>
 // 列出每個工具呼叫、subagent 呼叫（[sub]）、hook 擋下（HOOK DENY）、工具錯誤與最終結果，用來稽核沙盒測試是否照 SKILL.md 走。
 // 最後一行統計主流程輸出的階段回報（「### 」加 emoji 開頭的標題）份數與各份的階段 emoji。
+// 只適用 claude -p 的 stream-json 紀錄；互動 session 的對話紀錄檔不會完整保存接在工具呼叫前的文字，統計會偏少。
 const fs = require('fs');
 const file = process.argv[2];
 const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean);
