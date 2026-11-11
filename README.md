@@ -14,8 +14,9 @@ hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔（`sed -i`、
 ```
 doit/
   .claude-plugin/plugin.json
-  skills/doit/SKILL.md              主流程
-  skills/doit/references/           tiering / plan-format / implement / review / ui-verify / retro
+  skills/go/SKILL.md              主流程（/doit:go）
+  skills/go/references/           tiering / plan-format / implement / review / ui-verify / retro
+  skills/resume|status|abort/     子指令（/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                四個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
@@ -58,10 +59,10 @@ claude --plugin-dir <clone 路徑>/doit
 
 | 指令 | 用途 |
 |---|---|
-| `/doit:doit <開發指令>` | 新任務 |
-| `/doit:doit` 或 `/doit:doit resume` | 接續未完成任務 |
-| `/doit:doit status` | 看狀態 |
-| `/doit:doit abort` | 中止 |
+| `/doit:go <開發指令>` | 新任務 |
+| `/doit:resume` | 接續未完成任務 |
+| `/doit:status` | 看狀態 |
+| `/doit:abort [原因]` | 中止（會先確認） |
 
 任務狀態放在目標專案的 `.doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。
 
@@ -83,4 +84,4 @@ claude plugin validate doit
 | v0.2 | 高風險：plan-critic、fresh implementer、verifier、瀏覽器驗證 |
 | v0.3 | 無人看管模式與煞車 |
 | v0.4 | Greenfield 模式與慣例檔 |
-| v0.5 | 檢討自動化、`/doit:doit status` 強化 |
+| v0.5 | 檢討自動化、`/doit:status` 強化 |

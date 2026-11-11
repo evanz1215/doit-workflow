@@ -114,7 +114,7 @@ check('transcript_path 指向不存在的檔 → 維持嚴格擋下', (run(path.
 runLog(['--set', '下一步=寫計畫'], tmp);
 check('下一步有值 → stop 放行', allowed(run(path.join(HOOKS, 'guard-stop.js'), stopEvent(false), tmp)));
 const s1 = run(path.join(HOOKS, 'session-start.js'), startEvent(), tmp);
-check('session-start 提示未完成任務', s1.json && /未完成/.test(s1.json.hookSpecificOutput.additionalContext), s1.out);
+check('session-start 提示未完成任務並指向 /doit:resume', s1.json && /未完成/.test(s1.json.hookSpecificOutput.additionalContext) && /\/doit:resume/.test(s1.json.hookSpecificOutput.additionalContext), s1.out);
 
 console.log('\n[4] log.js 欄位驗證與紀錄行');
 check('狀態不合法被拒', runLog(['--set', '狀態=隨便'], tmp).code !== 0);
@@ -157,12 +157,20 @@ const implFm = (implText.match(/^---\n([\s\S]*?)\n---/) || [])[1] || '';
 check('implementer frontmatter name 一致', /^name:\s*implementer\s*$/m.test(implFm));
 check('implementer 工具含 Edit、Write、Bash', ['Edit', 'Write', 'Bash'].every((t) => new RegExp(`^tools:.*\\b${t}\\b`, 'm').test(implFm)));
 check('implementer 寫明不 commit、不碰 .doit/、有輸出格式', /不做任何 `git commit`/.test(implText) && /不讀寫 `\.doit\/`/.test(implText) && implText.includes('輸出格式'));
-const skillText = fs.readFileSync(path.join(PLUGIN, 'skills', 'doit', 'SKILL.md'), 'utf8');
+const skillText = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'SKILL.md'), 'utf8');
+for (const sk of ['go', 'resume', 'status', 'abort']) {
+  const p = path.join(PLUGIN, 'skills', sk, 'SKILL.md');
+  const t = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+  check(`skills/${sk}/SKILL.md 存在且 name 一致`, new RegExp(`^---\\n[\\s\\S]*?^name:\\s*${sk}\\s*$`, 'm').test(t));
+  if (sk !== 'go') check(`${sk} 只能由使用者觸發`, /^disable-model-invocation:\s*true\s*$/m.test(t));
+}
+check('resume 指向 go 的主流程', fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8').includes('skills/go/SKILL.md'));
+check('沒有殘留的 /doit:doit', !/\/doit:doit/.test(skillText + fs.readFileSync(path.join(HOOKS, 'session-start.js'), 'utf8')));
 check('SKILL.md 階段 5 派 doit:implementer，不再說尚未實作', /doit:implementer/.test(skillText) && !/implementer」?尚未實作/.test(skillText));
 check('SKILL.md 提到 doit:plan-critic 與 doit:verifier', /doit:plan-critic/.test(skillText) && /doit:verifier/.test(skillText));
 check('SKILL.md 不再說高風險關卡尚未實作', !/高風險專屬關卡（plan-critic/.test(skillText));
 for (const ref of ['tiering', 'plan-format', 'implement', 'review', 'retro', 'ui-verify']) {
-  check(`references/${ref}.md 存在且 SKILL.md 有引用`, fs.existsSync(path.join(PLUGIN, 'skills', 'doit', 'references', `${ref}.md`)) && skillText.includes(`references/${ref}.md`));
+  check(`references/${ref}.md 存在且 SKILL.md 有引用`, fs.existsSync(path.join(PLUGIN, 'skills', 'go', 'references', `${ref}.md`)) && skillText.includes(`references/${ref}.md`));
 }
 const lp = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-001 測試教訓\n- 預防規則：x\n' });
 check('--lesson project 寫入專案教訓檔', lp.status === 0 && /P-001 測試教訓/.test(fs.readFileSync(path.join(tmp, STATE, 'LESSONS.md'), 'utf8')), lp.stderr);

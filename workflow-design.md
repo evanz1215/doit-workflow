@@ -9,7 +9,7 @@
 
 | 本文寫的 | v0.2 實際 |
 |---|---|
-| 指令 `/doit …` | `/doit:doit …`；`new`、`auto`、`retro` 子指令尚未實作 |
+| 指令 `/doit …` 加子指令 | `/doit:go`、`/doit:resume`、`/doit:status`、`/doit:abort` 四個獨立指令；`new`、`auto`、`retro` 尚未實作 |
 | 低風險批准可免 | 一律必須批准；免批准要等 v0.3 無人看管模式 |
 | 高風險每步 fresh `doit:implementer` 做完回報 | 已實作（v0.2.1）；implementer 只做改檔與驗證，紀錄與 wip commit 由主 context 核對後做 |
 | 審查在背景 subagent 跑 | 前景執行，等結果回來 |
@@ -322,8 +322,9 @@ Hooks 是 plugin 內的 Node 腳本，只讀任務檔頂端欄位與工具參數
 doit/
   .claude-plugin/plugin.json
   skills/
-    doit/SKILL.md               # 主流程，依階段載入 references
-    doit/references/
+    go/SKILL.md                 # 主流程（/doit:go），依階段載入 references
+    resume/ status/ abort/      # 子指令
+    go/references/
       tiering.md
       plan-format.md
       review.md

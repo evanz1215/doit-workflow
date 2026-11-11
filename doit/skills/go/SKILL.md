@@ -1,7 +1,7 @@
 ---
-name: doit
-description: 依風險分級的端到端開發工作流：把一個開發指令（新功能、修 bug、重構、補測試）走完 探索 → 釐清 → 計畫落檔 → 使用者批准 → 實作 → 驗證 → 獨立審查 → commit → 檢討。出錯代價決定關卡數量。使用者輸入 /doit:doit，或在專案中要求實作、修 bug、重構等需要改多個檔案的任務時使用。單純問答、只讀程式碼、一行小改不要用。
-argument-hint: <開發指令 | resume | status | abort>
+name: go
+description: 依風險分級的端到端開發工作流：把一個開發指令（新功能、修 bug、重構、補測試）走完 探索 → 釐清 → 計畫落檔 → 使用者批准 → 實作 → 驗證 → 獨立審查 → commit → 檢討。出錯代價決定關卡數量。使用者輸入 /doit:go，或在專案中要求實作、修 bug、重構等需要改多個檔案的任務時使用。單純問答、只讀程式碼、一行小改不要用。
+argument-hint: <開發指令>
 ---
 
 # doit：依風險分級的開發工作流（v0.2）
@@ -19,8 +19,7 @@ argument-hint: <開發指令 | resume | status | abort>
 | `$ARGUMENTS` | 做什麼 |
 |---|---|
 | 空白 或 `resume` | 走「接續」；沒有進行中任務時請使用者說明要做什麼 |
-| `status` | `node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show`，再摘要狀態、下一步、驗收標準證據進度 |
-| `abort` | 確認後 `log.js --close 中止 "[停止] 使用者中止：<原因>"`，不動分支與程式碼 |
+| `status` / `abort` | 照 `${CLAUDE_PLUGIN_ROOT}/skills/status/SKILL.md` / `${CLAUDE_PLUGIN_ROOT}/skills/abort/SKILL.md` 做，並告訴使用者之後可以直接用 `/doit:status`、`/doit:abort` |
 | `auto ...` / `new ...` | 告知尚未支援（v0.3、v0.4 才有），詢問是否以一般模式繼續 |
 | 其他 | 新任務，從階段 0 開始 |
 
@@ -51,12 +50,12 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 
 | 檔案 | 何時讀 |
 |---|---|
-| `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/tiering.md` | 階段 2 初判、階段 3 定級、實作中懷疑要升級時 |
-| `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/plan-format.md` | 階段 3 寫計畫前；接續時 |
-| `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/implement.md` | 階段 5 高風險開始實作前；高風險任務接續在「實作中」時 |
-| `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/review.md` | 階段 3 高風險送 plan-critic 前；階段 7 審查；階段 8 完成門檻 |
-| `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/ui-verify.md` | 階段 3 寫 UI 類驗收標準時；階段 6 有 UI 改動要驗證時 |
-| `${CLAUDE_PLUGIN_ROOT}/skills/doit/references/retro.md` | 階段 9 檢討 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/tiering.md` | 階段 2 初判、階段 3 定級、實作中懷疑要升級時 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/plan-format.md` | 階段 3 寫計畫前；接續時 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/implement.md` | 階段 5 高風險開始實作前；高風險任務接續在「實作中」時 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/review.md` | 階段 3 高風險送 plan-critic 前；階段 7 審查；階段 8 完成門檻 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/ui-verify.md` | 階段 3 寫 UI 類驗收標準時；階段 6 有 UI 改動要驗證時 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/retro.md` | 階段 9 檢討 |
 
 ## 接續
 
