@@ -230,6 +230,67 @@ check('SKILL.md 不再說高風險關卡尚未實作', !/高風險專屬關卡�
 for (const ref of ['tiering', 'plan-format', 'implement', 'review', 'retro', 'ui-verify']) {
   check(`references/${ref}.md 存在且 SKILL.md 有引用`, fs.existsSync(path.join(PLUGIN, 'skills', 'go', 'references', `${ref}.md`)) && skillText.includes(`references/${ref}.md`));
 }
+
+console.log('\n[4c] --ref：Read 被權限擋下時仍讀得到參考檔');
+const refList = runLog(['--ref'], tmp);
+check('--ref 不給名稱會列出可用名稱', refList.code === 0 && ['tiering', 'plan-format', 'implement', 'review', 'ui-verify', 'retro', 'go', 'status', 'abort'].every((n) => refList.out.includes(n)), refList.out + refList.err);
+for (const ref of ['tiering', 'plan-format', 'implement', 'review', 'retro', 'ui-verify']) {
+  const r = runLog(['--ref', ref], tmp);
+  check(`--ref ${ref} 印出參考檔全文`, r.code === 0 && r.out === fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', `${ref}.md`), 'utf8'), r.err);
+}
+const refGo = runLog(['--ref', 'go'], tmp);
+check('--ref go 印出主流程 SKILL.md 全文', refGo.code === 0 && refGo.out === skillText, refGo.err);
+const refBad = runLog(['--ref', '../../README'], tmp);
+check('--ref 不接受表外的名稱（路徑穿越被拒，錯誤訊息列出可用名稱）', refBad.code !== 0 && /可用名稱/.test(refBad.err) && !refBad.out);
+const noRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'doit-noref-'));
+const refNoRepo = runLog(['--ref', 'review'], noRepo);
+check('--ref 不需要在 git repo 裡', refNoRepo.code === 0 && /## 完成門檻/.test(refNoRepo.out), refNoRepo.err);
+fs.rmSync(noRepo, { recursive: true, force: true });
+check('--help 有 --ref 的說明', /--ref \[名稱\]/.test(help.out));
+check('SKILL.md 規定參考檔讀不到先用 --ref，再不行就停下', /log\.js" --ref <名稱>/.test(skillText) && /兩種方式都讀不到就停下/.test(skillText) && /不得憑印象/.test(skillText));
+check('resume 與 plan 也有 --ref 的退路', /--ref go/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8')) && /--ref tiering/.test(planText));
+
+console.log('\n[4d] 審查獨立性：prompt 不給任務檔路徑、審查 agent 不讀 .doit');
+for (const agent of ['plan-critic', 'verifier', 'reviewer']) {
+  const t = fs.readFileSync(path.join(PLUGIN, 'agents', `${agent}.md`), 'utf8');
+  check(`${agent} 規定不讀 .doit/，缺內容時回報「prompt 缺」`, /\*\*不讀 `\.doit\/` 下的任何檔案\*\*/.test(t) && /prompt 缺：/.test(t));
+}
+check('review.md 規定審查 prompt 貼內容、不給任務檔路徑', /不給任務檔路徑/.test(reviewText) && /貼內容，不是給路徑/.test(reviewText) && !/<任務檔裡 ## 計畫 vN 的全文/.test(reviewText));
+check('review.md 重審時貼修改後的計畫全文', /修改後的計畫全文/.test(reviewText) && !/附修改後的那幾節全文/.test(reviewText));
+check('SKILL.md 階段 3 與階段 7 都寫明內容貼進 prompt', /貼進 prompt/.test(skillText) && /三種審查的 prompt 都把內容貼進去，不給任務檔路徑/.test(skillText));
+
+console.log('\n[4e] verifier 通過但有 major、已定的決定、高風險審查修正');
+check('review.md 有 verifier「通過但有 major」的重跑規則', /結論「通過」但有要修的 major/.test(reviewText) && /重送 verifier/.test(reviewText) && /只動測試檔/.test(reviewText));
+check('SKILL.md 階段 7 提到通過但有 major 的重送', /結論「通過」但有要修的 major/.test(skillText));
+const implRef = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'implement.md'), 'utf8');
+check('verifier 與 reviewer 的 prompt 模板都有「已定的決定」', (reviewText.match(/^## 已定的決定$/gm) || []).length === 2);
+check('implementer 的 prompt 模板有「已定的決定」', /^## 已定的決定$/m.test(implRef));
+for (const agent of ['verifier', 'reviewer', 'implementer']) {
+  check(`${agent} 的收件清單有「已定的決定」`, /^- 已定的決定/m.test(fs.readFileSync(path.join(PLUGIN, 'agents', `${agent}.md`), 'utf8')));
+}
+check('verifier 會核對已定的決定', /假設與已定的決定核對/.test(fs.readFileSync(path.join(PLUGIN, 'agents', 'verifier.md'), 'utf8')));
+check('SKILL.md 階段 4 記下已定的決定、處理改選另一個選擇', /\[紀錄\] 已定的決定：/.test(skillText) && /使用者改選「另一個選擇」/.test(skillText));
+const fixSec = (implRef.split(/^## 審查後的修正/m)[1] || '').split(/^## /m)[0];
+check('implement.md 有「審查後的修正」一節：派新的 implementer、不做 wip commit', /派一個新的 implementer，主流程不自己改/.test(fixSec) && /不做 wip commit/.test(fixSec) && /失敗計數另起/.test(fixSec));
+check('SKILL.md 與 review.md 都指向「審查後的修正」', /高風險的審查修正也派新的 implementer/.test(skillText) && /`implement\.md`「審查後的修正」/.test(reviewText));
+check('implement.md 的每步回報改用階段回報格式', !/用 3 行/.test(implRef) && /依 SKILL\.md「階段回報」的格式回報這一步/.test(implRef));
+
+console.log('\n[4f] analyze-log.js 統計審查獨立性');
+const fakeLog = path.join(os.tmpdir(), `doit-analyze-${process.pid}.jsonl`);
+const asst = (content, parent) => JSON.stringify({ type: 'assistant', session_id: 's1', parent_tool_use_id: parent || null, message: { content } });
+fs.writeFileSync(fakeLog, [
+  asst([{ type: 'tool_use', id: 'A1', name: 'Agent', input: { subagent_type: 'doit:plan-critic', prompt: '計畫全文在 C:\\p\\.doit\\tasks\\x.md，請自己讀' } }]),
+  asst([{ type: 'tool_use', id: 'S1', name: 'Read', input: { file_path: 'C:\\p\\.doit\\tasks\\x.md' } }], 'A1'),
+  asst([{ type: 'tool_use', id: 'S2', name: 'Read', input: { file_path: 'C:\\scratch\\doit-sandbox\\src\\a.js' } }], 'A1'),
+  asst([{ type: 'tool_use', id: 'A2', name: 'Agent', input: { subagent_type: 'doit:verifier', prompt: '## 驗收標準\n| 1 | … |' } }]),
+  asst([{ type: 'tool_use', id: 'S3', name: 'Bash', input: { command: 'npm test' } }], 'A2'),
+  asst([{ type: 'tool_use', id: 'A3', name: 'Agent', input: { subagent_type: 'doit:implementer', prompt: '不寫 `.doit/tasks` 底下的檔案' } }]),
+].join('\n') + '\n');
+const an = spawnSync(process.execPath, [path.join(PLUGIN, 'test', 'analyze-log.js'), fakeLog], { encoding: 'utf8' });
+check('審查 prompt 指向任務檔會被算到（implementer 的 prompt 不算）', an.status === 0 && /審查 prompt 指向任務檔：1 次（doit:plan-critic）/.test(an.stdout), an.stdout + an.stderr);
+check('subagent 讀 .doit 會被算到（路徑裡的 doit-sandbox 不算）', /subagent 碰到 \.doit：1 次（doit:plan-critic:Read）/.test(an.stdout), an.stdout);
+fs.rmSync(fakeLog, { force: true });
+
 const lp = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-001 測試教訓\n- 預防規則：x\n' });
 check('--lesson project 寫入專案教訓檔', lp.status === 0 && /P-001 測試教訓/.test(fs.readFileSync(path.join(tmp, STATE, 'LESSONS.md'), 'utf8')), lp.stderr);
 const lp2 = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-002 第二條\n' });

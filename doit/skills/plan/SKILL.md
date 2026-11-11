@@ -130,7 +130,7 @@ disable-model-invocation: true
 - <日期> 建立
 ```
 
-- **預估等級**照 `${CLAUDE_PLUGIN_ROOT}/skills/go/references/tiering.md` 的條件判斷，只是預估；正式定級由該任務的 `/doit:go` 在看過呼叫者之後決定，只會維持或升級。
+- **預估等級**照 `${CLAUDE_PLUGIN_ROOT}/skills/go/references/tiering.md` 的條件判斷（Read 被權限擋下時用 `node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --ref tiering`），只是預估；正式定級由該任務的 `/doit:go` 在看過呼叫者之後決定，只會維持或升級。
 - **指令**一定要帶計畫檔路徑與任務編號，`/doit:go` 才會去讀這份計畫。
 
 ## 回報格式

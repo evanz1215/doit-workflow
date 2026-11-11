@@ -21,7 +21,11 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --new-plan <slug>                        建立 .doit/plans/<日期>-<slug>.md 骨架並印出路徑（給 /doit:plan 用；不動 ACTIVE）
   node log.js --config                                 印出目前設定（沒有設定檔時是預設值）
   node log.js --config commit=on|off pr=on|off         修改設定，寫進 .doit/config.json
+  node log.js --ref [名稱]                              印出 plugin 內的參考檔或 skill 全文（Read 被權限擋下時用）；不給名稱就列出可用名稱
   node log.js --help                                   這份說明
+
+參考檔（--ref）：名稱是檔名去掉 .md，例如 --ref tiering、--ref review；skill 用目錄名，例如 --ref go 印出主流程 SKILL.md。
+plugin 目錄常常不在 session 的允許目錄內，Read 會被擋；這個指令不需要額外權限。
 
 教訓檔位置：專案 <repo>/.doit/LESSONS.md；全域 ~/.doit/LESSONS.md（兩者都不在 .claude/ 下，不會被擋）。
 寫教訓請用 --lesson 搭配 heredoc，不要直接 Write 全域檔（在專案目錄外會被權限擋下）。
@@ -124,6 +128,10 @@ function parseArgs(argv) {
       if (!out.newPlan) die('--new-plan 需要 slug');
     } else if (a === '--config') {
       out.config = true;
+    } else if (a === '--ref') {
+      // 名稱可省略（列出可用名稱）；下一個參數是另一個選項時不吃掉它
+      const next = argv[i + 1];
+      out.ref = next && !next.startsWith('--') ? argv[++i] : '';
     } else if (a === '--hit') {
       out.hit = true;
     } else if (a === '--help' || a === '-h') {
@@ -316,9 +324,39 @@ function newPlan(root, rawSlug) {
   process.stdout.write(`已建立 ${lib.normalize(path.relative(root, p))}\n`);
 }
 
+// plugin 內可以用 --ref 印出的檔案：skills/go/references/*.md（名稱＝檔名去掉 .md）與 skills/<名稱>/SKILL.md。
+// 只認這張表裡的名稱，不拿使用者給的字串去組路徑。
+function refTable() {
+  const skillsDir = path.resolve(__dirname, '..', 'skills');
+  const table = new Map();
+  const refsDir = path.join(skillsDir, 'go', 'references');
+  if (fs.existsSync(refsDir)) {
+    for (const f of fs.readdirSync(refsDir).sort()) {
+      if (f.endsWith('.md')) table.set(f.slice(0, -3), path.join(refsDir, f));
+    }
+  }
+  if (fs.existsSync(skillsDir)) {
+    for (const d of fs.readdirSync(skillsDir).sort()) {
+      const p = path.join(skillsDir, d, 'SKILL.md');
+      if (fs.existsSync(p) && !table.has(d)) table.set(d, p);
+    }
+  }
+  return table;
+}
+
+function printRef(name) {
+  const table = refTable();
+  const names = [...table.keys()].join('、');
+  if (!name) { process.stdout.write(`可用名稱：${names}\n用法：node log.js --ref <名稱>\n`); return; }
+  if (!table.has(name)) die(`沒有叫「${name}」的參考檔。可用名稱：${names}`);
+  process.stdout.write(fs.readFileSync(table.get(name), 'utf8'));
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { process.stdout.write(HELP); return; }
+  // --ref 不需要專案根目錄：讀的是 plugin 自己的檔案
+  if (args.ref !== undefined) { printRef(args.ref); return; }
 
   const root = lib.findProjectRoot(process.cwd());
   if (!root) die(`找不到專案根目錄（沒有 .git 也沒有 ${lib.WF_DIR}/ACTIVE）`);
