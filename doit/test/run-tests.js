@@ -164,6 +164,17 @@ for (const sk of ['go', 'resume', 'status', 'abort']) {
   check(`skills/${sk}/SKILL.md 存在且 name 一致`, new RegExp(`^---\\n[\\s\\S]*?^name:\\s*${sk}\\s*$`, 'm').test(t));
   if (sk !== 'go') check(`${sk} 只能由使用者觸發`, /^disable-model-invocation:\s*true\s*$/m.test(t));
 }
+const STAGE_EMOJI = ['🧰', '🔍', '❓', '📝', '✋', '🔨', '🧪', '👀', '📦', '🪞'];
+check('SKILL.md 有「階段回報」模板與十個階段的 emoji', /## 階段回報/.test(skillText) && STAGE_EMOJI.every((e) => skillText.includes(e)));
+STAGE_EMOJI.forEach((e, n) => {
+  const sec = (skillText.split(new RegExp(`^## 階段 ${n}：`, 'm'))[1] || '').split(/^## /m)[0];
+  check(`階段 ${n} 段落結尾有回報指示`, /^- \*\*回報\*\*：/m.test(sec) && (sec.includes(`${e} Step ${n}`) || n === 5));
+});
+check('舊的「回報格式」小節已移除', !/^## 回報格式/m.test(skillText));
+for (const agent of ['plan-critic', 'implementer', 'verifier', 'reviewer']) {
+  check(`${agent} 規定 Bash 一次一條指令`, /Bash 一次呼叫只跑一條指令/.test(fs.readFileSync(path.join(PLUGIN, 'agents', `${agent}.md`), 'utf8')));
+}
+check('review.md 規定重審開新的前景呼叫、不用 SendMessage', /不用 SendMessage/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'review.md'), 'utf8')));
 check('resume 指向 go 的主流程', fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8').includes('skills/go/SKILL.md'));
 check('沒有殘留的 /doit:doit', !/\/doit:doit/.test(skillText + fs.readFileSync(path.join(HOOKS, 'session-start.js'), 'utf8')));
 check('SKILL.md 階段 5 派 doit:implementer，不再說尚未實作', /doit:implementer/.test(skillText) && !/implementer」?尚未實作/.test(skillText));
