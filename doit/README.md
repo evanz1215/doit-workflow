@@ -59,6 +59,8 @@ node doit/test/run-tests.js
 4. 用 `node doit/test/analyze-log.js run2.jsonl` 列出每個工具呼叫、subagent 呼叫、hook 擋下與最終結果，逐階段對照 `skills/go/SKILL.md` 稽核有沒有照流程走（四拍順序、審查 prompt 內容、交付 commit 前有沒有先改狀態）。
 5. 壞天氣路徑：加 `--max-turns N` 在實作中途切斷再 `--resume` 測接續；在 wip commit 裡塞一個錯誤再把狀態設回「待審查」測 reviewer 打回；不寫「下一步」就結束測 Stop hook。
 
-注意：headless 模式下 Claude Code 的 Bash 靜態檢查會擋掉複合指令（`&&`、變數、`$?`），這是正常成本，不是 doit 的問題；看到大量 `requires approval` 時先檢查 `--allowedTools` 是否涵蓋專案的 build 與測試指令。
+注意：headless 模式下，agent 常把中途的階段回報寫進思考區塊，只有一回合結束時（✋ 批准請求、📦 交付、🪞 檢討）才輸出成文字；三輪沙盒測試都是這樣，加規則也沒改善。互動模式（終端機、VS Code）下每個階段都會正常回報。所以 headless 稽核以任務檔的紀錄行為準，`analyze-log.js` 的「階段回報」統計在 headless 會偏少。沙盒測試跑完的教訓可能寫進真正的全域教訓檔 `~/.doit/LESSONS.md`，跑完記得檢查。
+
+另外，headless 模式下 Claude Code 的 Bash 靜態檢查會擋掉複合指令（`&&`、變數、`$?`），這是正常成本，不是 doit 的問題；看到大量 `requires approval` 時先檢查 `--allowedTools` 是否涵蓋專案的 build 與測試指令。
 
 設計文件與市面調查見 repo 根目錄的 `workflow-design.md` 與 `market-workflows-comparison.md`。
