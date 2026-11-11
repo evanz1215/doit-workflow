@@ -211,6 +211,14 @@ check('wip 單引號放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), ba
 check('wip heredoc 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "$(cat <<\'EOF\'\nwip: 步驟 2\n\n細節\nEOF\n)"'), tmp)));
 check('交付 commit 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "feat: paging"'), tmp)));
 check('heredoc 非 wip 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "$(cat <<\'EOF\'\nfeat: paging\nEOF\n)"'), tmp)));
+check('第二個 -m 才是 wip 仍被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "feat: paging" -m "wip: 假的"'), tmp)));
+check('wip 之後再串一個交付 commit 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "wip: a" && git commit -m "feat: b"'), tmp)));
+check('兩個 wip commit 串接放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "wip: a" && git commit -m "wip: b"'), tmp)));
+check('wip 訊息裡有 git commit 字樣放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "wip: 修 git commit hook"'), tmp)));
+check('wip -am 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -am "wip: 步驟 1"'), tmp)));
+check('wip --message= 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit --message="wip: 步驟 1"'), tmp)));
+check('--set 值含換行被拒', runLog(['--set', '下一步=a\n狀態: 完成'], tmp).code !== 0 && /狀態: 已批准/.test(taskText()));
+check('有進行中任務時 --new 被拒', runLog(['--new', 'another'], tmp).code !== 0 && /add-paging/.test(taskPath()));
 check('push 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git push origin feat/x'), tmp)));
 check('merge 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git merge feat/x'), tmp)));
 runLog(['--set', '狀態=實作中'], tmp);

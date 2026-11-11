@@ -1,7 +1,25 @@
 # AI Agent 開發工作流設計稿 v0.1
 
-> 日期：2026-11-08。狀態：設計中，尚未實作。
+> 日期：2026-11-08。狀態：v0.2 已實作（見 `doit/`）；v0.3 之後尚未實作。
 > 依據：`market-workflows-comparison.md` 的市面調查，以及已拍板的設計決定（見第 1 節）。
+
+## 0. 實作現況（v0.2，2026-11-11）
+
+這份是完整設計，包含還沒做的版本。目前實作與本文不同的地方如下，兩者不一致時以 `doit/` 內的 skill 與 hooks 為準：
+
+| 本文寫的 | v0.2 實際 |
+|---|---|
+| 指令 `/doit …` | `/doit:doit …`；`new`、`auto`、`retro` 子指令尚未實作 |
+| 低風險批准可免 | 一律必須批准；免批准要等 v0.3 無人看管模式 |
+| 高風險每步 fresh `doit:implementer` | 尚未實作，在主 context 做，改以每步回報補償 |
+| 審查在背景 subagent 跑 | 前景執行，等結果回來 |
+| 迭代上限 hook、任務檔「迭代」欄 | 尚未實作（v0.3） |
+| Stop hook 檢查「下一步」為空或與狀態不符 | 只檢查為空，且只在這個 session 動過任務時才擋 |
+| `[錯誤]` 分類：需求／實作／工具 | 多了 環境、流程 |
+| references 有 `unattended.md` | 沒有；多了 `ui-verify.md` |
+| Greenfield 模式與慣例檔 | 尚未實作（v0.4） |
+
+hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔、`bash -c "git push"`、`gh pr merge` 都擋不到。
 
 ## 1. 已拍板的決定
 
@@ -304,18 +322,19 @@ Hooks 是 plugin 內的 Node 腳本，只讀任務檔頂端欄位與工具參數
 doit/
   .claude-plugin/plugin.json
   skills/
-    wf/SKILL.md                 # 主流程，依階段載入 references
-    wf/references/
+    doit/SKILL.md               # 主流程，依階段載入 references
+    doit/references/
       tiering.md
       plan-format.md
       review.md
-      unattended.md
+      ui-verify.md
+      unattended.md             # v0.3，尚未建立
       retro.md
   agents/
-    doit:plan-critic.md
-    doit:implementer.md
-    doit:verifier.md
-    doit:reviewer.md
+    plan-critic.md
+    implementer.md              # 尚未建立
+    verifier.md
+    reviewer.md
   hooks/
     hooks.json
     guard-edit.js

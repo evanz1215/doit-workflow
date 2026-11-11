@@ -5,16 +5,18 @@
 - [market-workflows-comparison.md](market-workflows-comparison.md)：12 種市面工作流的流程與優缺點
 - [workflow-design.md](workflow-design.md)：設計稿（分級、階段、無人看管、hooks、演進順序）
 
-## `doit/`：Claude Code plugin（v0.1）
+## `doit/`：Claude Code plugin（v0.2）
 
-v0.1 範圍：低／中風險、brownfield、一般模式、reviewer、hooks 擋改檔與 commit、任務檔、接續。
+v0.2 範圍：低／中／高風險、brownfield、一般模式、plan-critic／verifier／reviewer、瀏覽器 UI 驗證、hooks 擋改檔與 commit、任務檔、接續。
+
+hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔（`sed -i`、重導向）、`bash -c "git push"`、`gh pr merge` 都擋不到。
 
 ```
 doit/
   .claude-plugin/plugin.json
   skills/doit/SKILL.md              主流程
-  skills/doit/references/           tiering / plan-format / review / retro
-  agents/reviewer.md              獨立審查員 subagent
+  skills/doit/references/           tiering / plan-format / review / ui-verify / retro
+  agents/                         plan-critic / verifier / reviewer 三個 subagent
   hooks/hooks.json                四個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
   hooks/guard-commit.js           未完成不得交付 commit / push / merge
@@ -37,7 +39,7 @@ claude plugin marketplace add evanz1215/doit-workflow
 或從本機 clone 安裝（開發時用，改檔後 `/reload-plugins` 即生效）：
 
 ```bash
-claude plugin marketplace add D:/Project/repos/doit-workflow
+claude plugin marketplace add <clone 路徑>
 ```
 
 ```bash
@@ -49,7 +51,7 @@ claude plugin install doit@doit-workflows
 不想裝 marketplace 的話，單次測試可以：
 
 ```bash
-claude --plugin-dir D:/Project/repos/doit-workflow/doit
+claude --plugin-dir <clone 路徑>/doit
 ```
 
 ### 使用

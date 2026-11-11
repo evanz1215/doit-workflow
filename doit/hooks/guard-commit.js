@@ -14,7 +14,8 @@ const cmd = String((input.tool_input || {}).command || '');
 if (!cmd) lib.allow();
 
 const bare = lib.stripShellLiterals(cmd);
-const isGitCommit = /\bgit\b[^|&;\n]*\bcommit\b/.test(bare);
+const commits = [...bare.matchAll(/\bgit\b[^|&;\n]*\bcommit\b/g)];
+const isGitCommit = commits.length > 0;
 const isGitPush = /\bgit\b[^|&;\n]*\bpush\b/.test(bare);
 const isGitMerge = /\bgit\b[^|&;\n]*\bmerge(?!-)\b/.test(bare);
 if (!isGitCommit && !isGitPush && !isGitMerge) lib.allow();
@@ -34,9 +35,14 @@ if (isGitPush || isGitMerge) {
 
 // 檢查點 commit 的判定要看原始指令（wip: 在引號裡）：
 // -m "wip: ..."、-m 'wip: ...'、或 heredoc 第一行 wip:
-const isWip =
-  /-m\s*["']?\s*wip:/i.test(cmd) ||
-  /<<-?\s*["']?\w+["']?[^\n]*\r?\n\s*wip:/i.test(cmd);
+// 每個 git commit 各自切一段（位置取自去皮後的指令，訊息裡的「git commit」不算），
+// 每段只看第一個訊息旗標（-m、-am、--message），後面再接 -m "wip: …" 不算。全部是 wip 才放行。
+function segIsWip(seg) {
+  const msg = seg.match(/\s(?:-[a-zA-Z]*m|--message)[\s=]*["']?\s*(\S*)/);
+  const heredocWip = /<<-?\s*["']?\w+["']?[^\n]*\r?\n\s*wip:/i.test(seg);
+  return msg ? /^wip:/i.test(msg[1]) || (msg[1].startsWith('$(') && heredocWip) : heredocWip;
+}
+const isWip = commits.every((m, i) => segIsWip(cmd.slice(m.index, commits[i + 1] ? commits[i + 1].index : undefined)));
 
 if (isWip) {
   if (lib.LOCKED_STATUSES.includes(status)) {

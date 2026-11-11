@@ -156,6 +156,8 @@ function serialize(fields, bodyLines) {
 
 function applySets(fields, sets) {
   for (const [k, v] of sets) {
+    // 頂端欄位一行一個；換行會被解析成另一個欄位（例如夾帶「狀態: 完成」）
+    if (/[\r\n]/.test(k + v)) die(`${k}：欄位名與值不能含換行`);
     const val = FIELD_VALIDATORS[k];
     if (val) {
       const r = val(v);
@@ -270,6 +272,8 @@ function main() {
     const name = `${today()}-${slug}.md`;
     const taskPath = path.join(dir, 'tasks', name);
     if (fs.existsSync(taskPath)) die(`任務檔已存在：${name}`);
+    const cur = lib.readActiveTask(root);
+    if (!lib.isClosed(cur)) die(`已有進行中的任務 ${cur.name}（狀態「${cur.fields['狀態']}」）。先接續它，或用 --close 完成|中止 結束後再 --new`);
     fs.mkdirSync(path.dirname(taskPath), { recursive: true });
     ensureExcluded(root);
 

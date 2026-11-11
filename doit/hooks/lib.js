@@ -106,11 +106,13 @@ function isOutsideProject(root, filePath) {
 // 用在判斷 git push / merge / commit 時，避免 commit 訊息或紀錄文字裡的字被誤判。
 function stripShellLiterals(cmd) {
   let s = String(cmd);
+  // 用等長空白取代，讓去皮後的位置能對回原始指令（guard-commit 逐個 commit 切段要用）
+  const blank = (m) => ' '.repeat(m.length);
   // heredoc：<<'EOF' ... EOF、<<EOF ... EOF、<<-EOF
-  s = s.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, ' ');
+  s = s.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, blank);
   // 雙引號與單引號字串
-  s = s.replace(/"(?:[^"\\]|\\.)*"/g, ' ');
-  s = s.replace(/'[^']*'/g, ' ');
+  s = s.replace(/"(?:[^"\\]|\\.)*"/g, blank);
+  s = s.replace(/'[^']*'/g, blank);
   return s;
 }
 
