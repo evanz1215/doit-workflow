@@ -2,6 +2,7 @@
 // 解析 claude -p --output-format stream-json 的紀錄
 // 用法：node doit/test/analyze-log.js <run.jsonl>
 // 列出每個工具呼叫、subagent 呼叫（[sub]）、hook 擋下（HOOK DENY）、工具錯誤與最終結果，用來稽核沙盒測試是否照 SKILL.md 走。
+// 最後一行統計主流程輸出的階段回報（「### 」加 emoji 開頭的標題）份數與各份的階段 emoji。
 const fs = require('fs');
 const file = process.argv[2];
 const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean);
@@ -10,6 +11,9 @@ let sessionId = null;
 const tools = new Map(); // id -> {name, summary}
 const events = [];
 let result = null;
+const stageEmojis = []; // 主流程每份階段回報的階段 emoji，依出現順序
+// 「### 」後接一個以上 emoji；有狀態 emoji（❌ ⚠️）在前時，取最後一個（緊貼標題文字的那個）當階段 emoji
+const REPORT_RE = /^###\s+((?:\p{Extended_Pictographic}️?\s+)+)/u;
 
 function short(s, n = 160) {
   s = String(s).replace(/\s+/g, ' ').trim();
@@ -30,6 +34,13 @@ for (const line of lines) {
         events.push(`${sub}TOOL ${c.name}: ${short(summary)}`);
       } else if (c.type === 'text' && c.text.trim()) {
         events.push(`${sub}TEXT: ${short(c.text, 240)}`);
+        // 只算主流程；result 事件會重複最後一段文字，所以不在 result 裡算
+        if (!sub) {
+          for (const l of c.text.split(/\r?\n/)) {
+            const m = l.match(REPORT_RE);
+            if (m) stageEmojis.push(m[1].trim().split(/\s+/).pop());
+          }
+        }
       }
     }
   }
@@ -58,3 +69,4 @@ if (result) {
   console.log(`result.subtype: ${result.subtype}  turns: ${result.num_turns}  cost_usd: ${result.total_cost_usd}  duration_s: ${Math.round((result.duration_ms || 0) / 1000)}`);
   console.log(`final text: ${short(result.result || '', 1500)}`);
 }
+console.log(`階段回報：${stageEmojis.length} 份` + (stageEmojis.length ? `（${stageEmojis.join(' ')}）` : ''));
