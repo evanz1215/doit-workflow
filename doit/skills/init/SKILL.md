@@ -26,7 +26,12 @@ disable-model-invocation: true
    ```
 
    失敗時（格式不符、`pr=on` 但 `commit=off`）照錯誤訊息告訴使用者，不要自己改參數重試。
-3. **沒有參數**：先執行 `node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --config` 印出目前設定，再用上面的表格向使用者說明每一項目前是什麼、改了會怎樣，問要改哪些。使用者回答後照第 2 步寫入；使用者說不改就結束。
+3. **沒有參數**：先執行 `node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --config` 印出目前設定，然後**用 AskUserQuestion 工具讓使用者點選**，不要只用文字請使用者自己打參數。一次呼叫、兩題：
+   - 第 1 題 header `commit`：「完成任務時要不要做 commit？目前是 <目前值>。」選項 `on` 與 `off`，各附上表格裡的說明；目前的值放第一個並在標籤後加「（目前）」。
+   - 第 2 題 header `pr`：「完成後要不要 push 並開 PR？目前是 <目前值>。」選項 `on` 與 `off`，寫法同上；`on` 的說明註明需要 commit=on。
+
+   拿到答案後，只把和目前值不同的項目照第 2 步寫入（例如 `--config pr=on`）；都沒變就不寫檔，直接回報。答案是 commit=off 且 pr=on 時不要寫入，告訴使用者這個組合不成立，請他重選。
+   - 環境沒有 AskUserQuestion 工具（例如 headless）時，才改用文字列出目前值與可用的參數寫法，請使用者回覆。
 4. 回報：
 
 ```
