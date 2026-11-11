@@ -198,6 +198,7 @@ STAGE_EMOJI.forEach((e, n) => {
 });
 check('SKILL.md 階段 0 讀設定，階段 8 依 commit／pr 設定交付', /log\.js" --config/.test(skillText) && /\*\*`commit=off`\*\*/.test(skillText) && /`pr=off`（預設）/.test(skillText) && !/有 CI 設定（`\.github/.test(skillText));
 check('回報要輸出給使用者、headless 也要、先回報再動下一階段', /不能只寫在思考裡/.test(skillText) && /headless（`claude -p`）也一樣要回報/.test(skillText) && /\*\*先回報，再動下一個階段\*\*/.test(skillText));
+check('go 的回報模板有十個階段的進度清單與符號說明', /進度 \{已完成的階段數\}／10：/.test(skillText) && /\*\*進度清單\*\*/.test(skillText) && ['前置', '探索', '釐清', '計畫', '批准', '實作', '驗證', '審查', '完成', '檢討'].every((s) => new RegExp(`[✅▶⬜] ${s}`, 'u').test(skillText)));
 check('Step 5 回報要直接寫驗證結果', /不要寫「見下一份回報」/.test(skillText));
 check('跳過的階段仍用五欄模板，完成門檻歸 Step 8', /不要改用自由條列/.test(skillText) && /完成門檻檢查是 Step 8 的事/.test(skillText));
 check('交付回報每條驗收標準一行', /\*\*每條驗收標準一行\*\*/.test(skillText));
@@ -215,6 +216,7 @@ check('ask 規定只讀、不建任務、有回答格式', /不改任何檔案/.
 check('ask 固定欄位只有依據與不確定的地方，其餘適用時才出現', /\*\*只在適用時出現\*\*/.test(askText) && /- \*\*依據\*\*/.test(askText) && /- \*\*不確定的地方\*\*/.test(askText) && /順帶發現/.test(askText));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
 check('plan 規定只規劃不實作、用 --new-plan 建檔、指令帶計畫檔路徑', /不改專案檔案/.test(planText) && /不建立 doit 任務/.test(planText) && /--new-plan/.test(planText) && /\/doit:go 依 \.doit\/plans\//.test(planText));
+check('plan 的回報模板有七個階段的進度清單', /進度 \{已完成的階段數\}／7：/.test(planText) && /\*\*進度清單\*\*/.test(planText));
 check('go 認得計畫檔：階段 0 讀它、完成時更新任務狀態', /指令提到計畫檔/.test(skillText) && /任務來自計畫檔時/.test(skillText));
 const planFmt = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'plan-format.md'), 'utf8');
 check('計畫格式有「需要你決定」與假設查證狀態', /### 需要你決定/.test(planFmt) && /已查證：/.test(planFmt) && /未查證：/.test(planFmt));
