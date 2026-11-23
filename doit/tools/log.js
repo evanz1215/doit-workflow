@@ -20,7 +20,7 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --lesson-bump project|global <編號> [--hit]  既有教訓再犯：犯錯次數 +1（--hit 則遇到次數 +1），「最近」改成今天
   node log.js --new-plan <slug>                        建立 .doit/plans/<日期>-<slug>.md 骨架並印出路徑（給 /doit:plan 用；不動 ACTIVE）
   node log.js --config                                 印出目前設定（沒有設定檔時是預設值）
-  node log.js --config commit=on|off pr=on|off         修改設定，寫進 .doit/config.json
+  node log.js --config <鍵>=<值> ...                    修改設定，寫進 .doit/config.json（鍵與值見下方「設定」）
   node log.js --ref [名稱]                              印出 plugin 內的參考檔或 skill 全文（Read 被權限擋下時用）；不給名稱就列出可用名稱
   node log.js --help                                   這份說明
 
@@ -60,6 +60,8 @@ plugin 目錄常常不在 session 的允許目錄內，Read 會被擋；這個�
 設定（--config）：
   commit    on（預設）| off   off 時不做 wip 檢查點與交付 commit，變更留在工作目錄
   pr        off（預設）| on   on 時完成後 push 並開 PR；需要 commit=on
+  implementer        medium（預設）| high   從哪一級開始每步派 doit:implementer 實作；high 時中風險由主 context 自己改
+  implementer_model  inherit（預設）| fable | opus | sonnet | haiku   doit:implementer 用的模型；inherit 跟主 session 相同
 
 紀錄行會自動加上時間戳，並插入「## 紀錄」小節尾端（在 ## 計畫 vN 之前）。
 `;
@@ -91,7 +93,17 @@ const DEFAULT_FIELDS = [
 const LOG_HEADING = '## 紀錄';
 
 const CONFIG_FILE = 'config.json';
-const CONFIG_DEFAULTS = { commit: 'on', pr: 'off' };
+// 每個鍵的合法值，第一個是預設值
+const CONFIG_VALUES = {
+  commit: ['on', 'off'],
+  pr: ['off', 'on'],
+  implementer: ['medium', 'high'],
+  implementer_model: ['inherit', 'fable', 'opus', 'sonnet', 'haiku'],
+};
+const CONFIG_DEFAULTS = Object.fromEntries(Object.entries(CONFIG_VALUES).map(([k, v]) => [k, v[0]]));
+const CONFIG_USAGE = Object.entries(CONFIG_VALUES).map(([k, v]) => `${k}=${v.join('|')}`).join('、');
+// 用 hasOwn 而不是 in：in 會把 toString 這類原型上的名稱也當成合法的鍵
+const configOk = (k, v) => Object.hasOwn(CONFIG_VALUES, k) && CONFIG_VALUES[k].includes(v);
 
 function die(msg) {
   process.stderr.write(`log.js: ${msg}\n`);
@@ -278,24 +290,23 @@ function appendLesson(root, scope) {
   process.stdout.write(`已追加到 ${lib.normalize(target)}\n`);
 }
 
-// 設定檔只存 on/off 字串；缺的鍵用預設值補
+// 設定檔只存 CONFIG_VALUES 列的字串；缺的鍵用預設值補
 function readConfig(root) {
   const p = path.join(lib.wfDir(root), CONFIG_FILE);
   if (!fs.existsSync(p)) return { ...CONFIG_DEFAULTS };
   let saved;
   try { saved = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { saved = null; }
   const ok = saved && typeof saved === 'object' && !Array.isArray(saved) &&
-    Object.entries(saved).every(([k, v]) => Object.hasOwn(CONFIG_DEFAULTS, k) && (v === 'on' || v === 'off'));
-  if (!ok) die(`設定檔格式錯誤：${lib.normalize(p)}（只能有 ${Object.keys(CONFIG_DEFAULTS).join('、')}，值是 on 或 off；刪掉它就會回到預設值）`);
+    Object.entries(saved).every(([k, v]) => configOk(k, v));
+  if (!ok) die(`設定檔格式錯誤：${lib.normalize(p)}（可用：${CONFIG_USAGE}；刪掉它就會回到預設值）`);
   return { ...CONFIG_DEFAULTS, ...saved };
 }
 
 function configCmd(root, pairs) {
   const cfg = readConfig(root);
   for (const kv of pairs) {
-    const m = kv.match(/^(\w+)=(on|off)$/);
-    // 用 hasOwn 而不是 in：in 會把 toString 這類原型上的名稱也當成合法的鍵
-    if (!m || !Object.hasOwn(CONFIG_DEFAULTS, m[1])) die(`設定格式不符：${kv}（可用：${Object.keys(CONFIG_DEFAULTS).map((k) => `${k}=on|off`).join('、')}）`);
+    const m = kv.match(/^(\w+)=(\w+)$/);
+    if (!m || !configOk(m[1], m[2])) die(`設定格式不符：${kv}（可用：${CONFIG_USAGE}）`);
     cfg[m[1]] = m[2];
   }
   if (cfg.pr === 'on' && cfg.commit === 'off') die('pr=on 需要 commit=on：開 PR 前要先有 commit');

@@ -9,11 +9,11 @@
 
 | 本文寫的 | v0.2 實際 |
 |---|---|
-| 指令 `/doit …` 加子指令 | 獨立指令：`/doit:go`、`/doit:resume`、`/doit:status`、`/doit:abort`、`/doit:init`；另有設計稿沒有的 `/doit:ask`（唯讀回答）與 `/doit:plan`（把大需求拆成多個任務）；`new`、`auto`、`retro` 尚未實作 |
+| 指令 `/doit …` 加子指令 | 獨立指令：`/doit:go`、`/doit:resume`、`/doit:status`、`/doit:abort`、`/doit:init`；另有設計稿沒有的 `/doit:ask`（唯讀回答）、`/doit:plan`（把大需求拆成多個任務）與 `/doit:qa`（診斷 QA 回報的問題）；`new`、`auto`、`retro` 尚未實作 |
 | 計畫只有單一任務的計畫 | 多了計畫檔（`.doit/plans/`）：一份計畫含多個任務，各自用 `/doit:go` 執行並回寫狀態 |
 | 審查意見 blocker／major 必須修 | blocker 必須修；major 預設要修，不採納要寫理由並列進回報（`review.md`「意見分級怎麼處理」） |
 | 低風險批准可免 | 一律必須批准；免批准要等 v0.3 無人看管模式 |
-| 高風險每步 fresh `doit:implementer` 做完回報 | 已實作（v0.2.1）；implementer 只做改檔與驗證，紀錄與 wip commit 由主 context 核對後做 |
+| 高風險每步 fresh `doit:implementer` 做完回報 | 已實作（v0.2.1）；implementer 只做改檔與驗證，紀錄與 wip commit 由主 context 核對後做。v0.2.6 起中風險預設也派（`implementer=high` 可改回只有高風險），並可用 `implementer_model` 指定它的模型 |
 | 審查在背景 subagent 跑 | 前景執行，等結果回來 |
 | 迭代上限 hook、任務檔「迭代」欄 | 尚未實作（v0.3） |
 | Stop hook 檢查「下一步」為空或與狀態不符 | 只檢查為空，且只在這個 session 動過任務時才擋 |

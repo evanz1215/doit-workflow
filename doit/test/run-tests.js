@@ -91,6 +91,13 @@ check('commit=off 時 pr=on 被拒且設定不變', runLog(['--config', 'pr=on']
 check('同一次 commit=on pr=on 可以', runLog(['--config', 'commit=on', 'pr=on'], tmp).code === 0 && /pr: on/.test(runLog(['--config'], tmp).out));
 check('未知的鍵被拒', runLog(['--config', 'push=on'], tmp).code !== 0);
 check('值不是 on/off 被拒', runLog(['--config', 'commit=yes'], tmp).code !== 0);
+check('implementer 預設 medium、implementer_model 預設 inherit', /implementer: medium（預設）/.test(c0.out) && /implementer_model: inherit（預設）/.test(c0.out), c0.out);
+const c2 = runLog(['--config', 'implementer=high', 'implementer_model=opus'], tmp);
+const cfg2 = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+check('implementer=high implementer_model=opus 寫入設定檔', c2.code === 0 && cfg2.implementer === 'high' && cfg2.implementer_model === 'opus' && /implementer_model: opus\n/.test(c2.out), c2.err);
+check('implementer_model 不在清單內被拒且設定不變', runLog(['--config', 'implementer_model=gpt'], tmp).code !== 0 && JSON.parse(fs.readFileSync(cfgPath, 'utf8')).implementer_model === 'opus');
+check('implementer=low 被拒', runLog(['--config', 'implementer=low'], tmp).code !== 0);
+check('別的鍵的值不能混用（commit=high 被拒）', runLog(['--config', 'commit=high'], tmp).code !== 0);
 check('原型上的名稱（toString）不是合法的鍵，且沒寫進設定檔', runLog(['--config', 'toString=on'], tmp).code !== 0 && !Object.hasOwn(JSON.parse(fs.readFileSync(cfgPath, 'utf8')), 'toString'));
 fs.writeFileSync(cfgPath, '{"toString":"on"}');
 check('設定檔裡有原型上的名稱時報錯', runLog(['--config'], tmp).code !== 0);
@@ -214,6 +221,9 @@ check('review.md 規定重審開新的前景呼叫、不用 SendMessage', /不�
 const askText = fs.readFileSync(path.join(PLUGIN, 'skills', 'ask', 'SKILL.md'), 'utf8');
 check('ask 規定只讀、不建任務、有回答格式', /不改任何檔案/.test(askText) && /不建立 doit 任務/.test(askText) && /### 💬 doit:ask/.test(askText));
 check('ask 固定欄位只有依據與不確定的地方，其餘適用時才出現', /\*\*只在適用時出現\*\*/.test(askText) && /- \*\*依據\*\*/.test(askText) && /- \*\*不確定的地方\*\*/.test(askText) && /順帶發現/.test(askText));
+const qaText = fs.readFileSync(path.join(PLUGIN, 'skills', 'qa', 'SKILL.md'), 'utf8');
+check('qa 規定只診斷不修改、不建任務、重現三種結果、交接 /doit:go', /不改專案檔案/.test(qaText) && /不建立 doit 任務/.test(qaText) && ['已重現', '未重現', '無法實跑'].every((s) => qaText.includes(`**${s}**`)) && /### 🐞 doit:qa/.test(qaText) && /`\/doit:go 修正 /.test(qaText));
+check('qa 的驗證方法有回歸測試、QA 重測步驟、周邊回歸', ['回歸測試', 'QA 重測步驟', '周邊回歸'].every((s) => qaText.includes(`**${s}**`)));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
 check('plan 規定只規劃不實作、用 --new-plan 建檔、指令帶計畫檔路徑', /不改專案檔案/.test(planText) && /不建立 doit 任務/.test(planText) && /--new-plan/.test(planText) && /\/doit:go 依 \.doit\/plans\//.test(planText));
 check('plan 的回報模板有七個階段的進度清單', /進度 \{已完成的階段數\}／7：/.test(planText) && /\*\*進度清單\*\*/.test(planText));
@@ -225,6 +235,11 @@ check('init 沒參數時用 AskUserQuestion 讓使用者點選', /AskUserQuestio
 check('resume 指向 go 的主流程', fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8').includes('skills/go/SKILL.md'));
 check('沒有殘留的 /doit:doit', !/\/doit:doit/.test(skillText + fs.readFileSync(path.join(HOOKS, 'session-start.js'), 'utf8')));
 check('SKILL.md 階段 5 派 doit:implementer，不再說尚未實作', /doit:implementer/.test(skillText) && !/implementer」?尚未實作/.test(skillText));
+const implRef = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'implement.md'), 'utf8');
+check('階段 5 依 implementer 設定決定中風險派不派，並帶 implementer_model', /`implementer=medium`（預設）/.test(skillText) && /`implementer=high`/.test(skillText) && /implementer_model/.test(skillText) && /implementer_model/.test(implRef) && !/只有\*\*高風險\*\*任務用/.test(implRef));
+const initText = fs.readFileSync(path.join(PLUGIN, 'skills', 'init', 'SKILL.md'), 'utf8');
+check('init 列出 implementer 與 implementer_model 兩個設定', /^\| `implementer` \|/m.test(initText) && /^\| `implementer_model` \|/m.test(initText) && /^argument-hint:.*implementer_model=/m.test(initText));
+check('派 subagent 前要輸出派工通知，description 要寫具體；implement.md 與 review.md 都指回這條', /\*\*派 subagent 前先輸出派工通知\*\*/.test(skillText) && /🤖 派 doit:implementer/.test(skillText) && /`description` 參數/.test(skillText) && /派工通知/.test(implRef) && /派工通知/.test(reviewText));
 check('SKILL.md 提到 doit:plan-critic 與 doit:verifier', /doit:plan-critic/.test(skillText) && /doit:verifier/.test(skillText));
 check('SKILL.md 不再說高風險關卡尚未實作', !/高風險專屬關卡（plan-critic/.test(skillText));
 for (const ref of ['tiering', 'plan-format', 'implement', 'review', 'retro', 'ui-verify']) {
@@ -262,7 +277,6 @@ check('SKILL.md 階段 3 與階段 7 都寫明內容貼進 prompt', /貼進 prom
 console.log('\n[4e] verifier 通過但有 major、已定的決定、高風險審查修正');
 check('review.md 有 verifier「通過但有 major」的重跑規則', /結論「通過」但有要修的 major/.test(reviewText) && /重送 verifier/.test(reviewText) && /只動測試檔/.test(reviewText));
 check('SKILL.md 階段 7 提到通過但有 major 的重送', /結論「通過」但有要修的 major/.test(skillText));
-const implRef = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'implement.md'), 'utf8');
 check('verifier 與 reviewer 的 prompt 模板都有「已定的決定」', (reviewText.match(/^## 已定的決定$/gm) || []).length === 2);
 check('implementer 的 prompt 模板有「已定的決定」', /^## 已定的決定$/m.test(implRef));
 for (const agent of ['verifier', 'reviewer', 'implementer']) {
@@ -272,7 +286,7 @@ check('verifier 會核對已定的決定', /假設與已定的決定核對/.test
 check('SKILL.md 階段 4 記下已定的決定、處理改選另一個選擇', /\[紀錄\] 已定的決定：/.test(skillText) && /使用者改選「另一個選擇」/.test(skillText));
 const fixSec = (implRef.split(/^## 審查後的修正/m)[1] || '').split(/^## /m)[0];
 check('implement.md 有「審查後的修正」一節：派新的 implementer、不做 wip commit', /派一個新的 implementer，主流程不自己改/.test(fixSec) && /不做 wip commit/.test(fixSec) && /失敗計數另起/.test(fixSec));
-check('SKILL.md 與 review.md 都指向「審查後的修正」', /高風險的審查修正也派新的 implementer/.test(skillText) && /`implement\.md`「審查後的修正」/.test(reviewText));
+check('SKILL.md 與 review.md 都指向「審查後的修正」', /實作時派 implementer 的任務，審查修正也派新的 implementer/.test(skillText) && /`implement\.md`「審查後的修正」/.test(reviewText));
 check('implement.md 的每步回報改用階段回報格式', !/用 3 行/.test(implRef) && /依 SKILL\.md「階段回報」的格式回報這一步/.test(implRef));
 
 console.log('\n[4f] analyze-log.js 統計審查獨立性');

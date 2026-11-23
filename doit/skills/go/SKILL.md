@@ -10,7 +10,7 @@ argument-hint: <開發指令>
 
 **語言**：所有回報、計畫、任務檔紀錄、commit 訊息一律繁體中文（程式碼與指令除外）。
 
-**v0.2 範圍**：低／中／高風險、brownfield、一般模式。高風險多四道關卡：計畫送批准前先過 `doit:plan-critic`、實作每步派一個 fresh `doit:implementer`、審查時先 `doit:verifier` 實跑再 `doit:reviewer`、有 UI 改動時依 `references/ui-verify.md` 用內建瀏覽器實測。`auto`、`new` 子指令尚未實作，收到時告知並改走一般模式。
+**v0.2 範圍**：低／中／高風險、brownfield、一般模式。中風險以上實作每步派一個 fresh `doit:implementer`（設定 `implementer=high` 時只有高風險派）。高風險另外多三道關卡：計畫送批准前先過 `doit:plan-critic`、審查時先 `doit:verifier` 實跑再 `doit:reviewer`、有 UI 改動時依 `references/ui-verify.md` 用內建瀏覽器實測。`auto`、`new` 子指令尚未實作，收到時告知並改走一般模式。
 
 指令：$ARGUMENTS
 
@@ -52,7 +52,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 |---|---|
 | `${CLAUDE_PLUGIN_ROOT}/skills/go/references/tiering.md` | 階段 2 初判、階段 3 定級、實作中懷疑要升級時 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/go/references/plan-format.md` | 階段 3 寫計畫前；接續時 |
-| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/implement.md` | 階段 5 高風險開始實作前；高風險任務接續在「實作中」時 |
+| `${CLAUDE_PLUGIN_ROOT}/skills/go/references/implement.md` | 階段 5 要派 implementer 的任務開始實作前（高風險；`implementer=medium` 時含中風險）；這類任務接續在「實作中」時 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/go/references/review.md` | 階段 3 高風險送 plan-critic 前；階段 7 審查；階段 8 完成門檻 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/go/references/ui-verify.md` | 階段 3 寫 UI 類驗收標準時；階段 6 有 UI 改動要驗證時 |
 | `${CLAUDE_PLUGIN_ROOT}/skills/go/references/retro.md` | 階段 9 檢討 |
@@ -91,7 +91,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 | 2 釐清 | ❓ | 問了哪些問題（附建議答案）；沒有就寫「無阻擋型疑問」 |
 | 3 計畫 | 📝 | 等級與命中條件、步驟數、驗收標準數；高風險加 plan-critic 結論 |
 | 4 批准 | ✋ | 批准請求（見下） |
-| 5 實作 | 🔨 | **每一步回報一次**：標題寫「步驟 N／總步數」，列改了哪些檔案；「證據」欄直接寫這一步的驗證指令與結果（例如「npm test 10 過 0 敗」），不要寫「見下一份回報」；高風險加 implementer 回報狀態與你的核對結果 |
+| 5 實作 | 🔨 | **每一步回報一次**：標題寫「步驟 N／總步數」，列改了哪些檔案；「證據」欄直接寫這一步的驗證指令與結果（例如「npm test 10 過 0 敗」），不要寫「見下一份回報」；派 implementer 的步驟加它的回報狀態與你的核對結果 |
 | 6 驗證 | 🧪 | 逐條驗收標準：通過／失敗／未驗證，各附一行證據；基準比對結果 |
 | 7 審查 | 👀 | 各審查者的結論、blocker／major 的處理；低風險寫「低風險，跳過」。只寫審查本身，完成門檻檢查是 Step 8 的事 |
 | 8 完成 | 📦 | 完成門檻四項各自的檢查結果，加上交付回報（見下） |
@@ -106,6 +106,19 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --show
 - **結論**寫在標題冒號後面，例如「🧪 Step 6 驗證：6／7 通過，標準 3 失敗」。失敗或停下時在結論前加 ❌，有未解決的問題加 ⚠️；✅ ❌ ⚠️ 只表示狀態，不當階段 emoji 用。
 - **跳過的階段也要回報**，標題寫明跳過，例如「👀 Step 7 審查：低風險，跳過」，使用者才不會以為漏做。內容照樣用模板的五欄（沒有證據就省略「證據」欄），不要改用自由條列。
 - **停下或回到前面的階段**時立刻回報，標題寫實際狀態，例如「❌ 🔨 Step 5 實作：步驟 2 驗證連續失敗 3 次，停下」。
+- **派 subagent 前先輸出派工通知**：subagent 執行時你無法輸出任何文字，使用者只能等。所以每次呼叫 `doit:plan-critic`／`doit:implementer`／`doit:verifier`／`doit:reviewer` 之前（包含重派與重審），先輸出下面這段文字，再呼叫 Agent 工具。這不是階段回報，不用五欄模板，也不等使用者回覆。
+
+  ```markdown
+  🤖 派 doit:implementer 做步驟 2／4（模型：opus）
+  - **要做**：新增 parsePage() 並補測試
+  - **改檔**：src/page.js、test/page.test.js
+  - **驗證**：npm test -- page
+  - **回來後**：我重跑驗證並核對改到的檔案，再回報這一步
+  ```
+
+  - 標題寫派給誰、做哪一段（步驟 N／總步數，或「審查計畫 v1」「實跑驗證」「審查 diff」）、第幾輪（重派或重審時）；implementer 另外寫模型（`implementer_model` 是 `inherit` 時寫「同主 session」）。
+  - 審查類把「要做／改檔／驗證」換成一行 **在審**：審什麼、依據什麼；「回來後」寫你會怎麼處理它的意見。
+  - Agent 工具的 `description` 參數寫同樣具體的內容（例如「步驟 2／4 實作 parsePage」「審查 diff 第 1 輪」），不要寫「實作」「審查」這種看不出是哪一段的字：等待時畫面上顯示的就是它。
 - **每欄一兩行**，詳細證據留在任務檔，不要貼整份任務檔或整份 diff。「下一步」要跟 `log.js` 設的「下一步」欄一致。
 - **emoji 只用在對話回報**，不要寫進任務檔或 `log.js` 的紀錄行。
 - 兩個可以長一點的例外：
@@ -140,7 +153,7 @@ Claude Code 會在執行前靜態檢查 Bash 指令，複合指令常被擋下�
 - **執行任何指令前先看副作用**：會寫 DB、打外部服務、寄信、刪資料的，只在確認目標是本機或測試環境時才跑；無法確認就不跑，記為未驗證。
 - 跑一次基準檢查（lint + 相關測試；夠快就全跑），結果寫進任務檔 `## 基準檢查`。
 - **基準指令被工具權限擋下**（訊息含「requires approval」「can't be checked」「was blocked」）：這不是指令錯，是 Claude Code 的安全檢查。先試一次改寫：單一指令、不串接、可執行檔與路徑都寫絕對路徑字面值、不用變數、輸出用 `> log 2>&1` 導到 scratchpad。還是被擋就在 `## 基準檢查` 記「被權限擋下：<確切指令>」，並在給使用者的回報裡列出這條指令與需要的權限（例如 `Bash(msbuild:*)`），請使用者放行後重跑或接受無基準。**不要**自行改走替代方案（自建 harness、改用別的建置工具）來取代基準，替代方案只能是額外證據。
-- 讀設定：`node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --config`，記下 `commit` 與 `pr`（沒有設定檔時是預設值 commit=on、pr=off）。階段 5 的檢查點與階段 8 的交付都照它做，批准請求裡要寫明。
+- 讀設定：`node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --config`，記下 `commit`、`pr`、`implementer`、`implementer_model`（沒有設定檔時是預設值 commit=on、pr=off、implementer=medium、implementer_model=inherit）。階段 5 的檢查點與派工、階段 8 的交付都照它做，批准請求裡要寫明 commit／pr。
 - 讀教訓檔：`node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --lessons` 會印出專案（`.doit/LESSONS.md`）與全域（`~/.doit/LESSONS.md`）兩份；全域檔在專案目錄外，不要用 cat 或 Read 直接讀。挑相關條目照做。
 - **指令提到計畫檔**（例如「依 `.doit/plans/<檔名>` 的 T2：…」，由 `/doit:plan` 產生）：先讀那份計畫檔。
   - 該任務的目標、範圍、驗收重點，以及它引用的決定與假設，當成需求的一部分。計畫檔「範圍外」列的事這個任務也不做。
@@ -209,9 +222,9 @@ Claude Code 會在執行前靜態檢查 Bash 指令，複合指令常被擋下�
   第 2 拍沒過就不進第 3 拍；第 4 拍沒做完就不碰下一步的檔案。不要「順手先寫下一步的測試」，也不要把 commit 排在驗證前面。接續時靠的是紀錄與 commit 的順序和實際一致。
 - 碰到計畫沒涵蓋的情況：小偏差記 `[紀錄]` 繼續；要改做法、範圍、資料結構的，停下來重提計畫（回階段 3）。
 - 實作中發現影響超出定級（例如要改有呼叫者的函式、要動 schema）：`[升級]` 記下，依 `tiering.md` 升級，告知使用者。
-- 同一步驗證連續失敗 3 次 → 停，記 `[錯誤]`，回報使用者，不再硬試。高風險時 implementer 回報的失敗與你核對不過各算一次，重派不重設計數。
+- 同一步驗證連續失敗 3 次 → 停，記 `[錯誤]`，回報使用者，不再硬試。派 implementer 時，它回報的失敗與你核對不過各算一次，重派不重設計數。
 - 每步更新「下一步」。
-- **高風險每步派 fresh implementer**：先讀 `references/implement.md`。第 1、2 拍交給 `doit:implementer` subagent（前景執行，每步一個新的，一次只派一個），輸入只有這一步的做什麼／改哪些檔案／驗證、對應的驗收標準、相關假設、已定的決定、前面步驟的產出、範圍外、專案慣例，**不給對話與你的推理**。它不 commit、不寫任務檔。回來後你自己核對（改到的檔案都在清單內、重跑驗證通過、測試斷言有效）才做第 3、4 拍；沒過就再派一個新的，不自己下場改。
+- **中風險以上每步派 fresh implementer**：`implementer=medium`（預設）時中、高風險都派；`implementer=high` 時只有高風險派，中風險由主 context 自己做四拍。低風險一律主 context 自己做。要派時先讀 `references/implement.md`。第 1、2 拍交給 `doit:implementer` subagent（前景執行，每步一個新的，一次只派一個；設定 `implementer_model` 不是 `inherit` 時把它帶進 Agent 工具的 `model` 參數），輸入只有這一步的做什麼／改哪些檔案／驗證、對應的驗收標準、相關假設、已定的決定、前面步驟的產出、範圍外、專案慣例，**不給對話與你的推理**。它不 commit、不寫任務檔。回來後你自己核對（改到的檔案都在清單內、重跑驗證通過、測試斷言有效）才做第 3、4 拍；沒過就再派一個新的，不自己下場改。
 - **每步回報**：四拍做完就依「階段回報」回報「🔨 Step 5 實作：步驟 N／總步數 …」，不等使用者回覆就繼續（這是透明度，不是批准點）。
 - **回報**：每一步各回報一次（見上）；最後一步的回報就是這階段的回報，接著進階段 6。
 
@@ -230,7 +243,7 @@ Claude Code 會在執行前靜態檢查 Bash 指令，複合指令常被擋下�
 - **高風險**：先 `doit:verifier` 再 `doit:reviewer`，都前景執行。verifier 的輸入只有：需求原文、假設、已定的決定、驗收標準表、基準檢查的指令與結果、取得 diff 的指令、專案路徑、暫存目錄路徑（給它放邊界測試腳本，不得放進專案）。結論「未通過」或有 blocker → 回階段 5 修，修完只重跑失敗的標準，最多兩輪。結論「通過」但有要修的 major，而且修正動到測試以外的程式碼 → 修完同樣重送 verifier，只重跑那條意見的重現輸入與受影響的標準。verifier 過了才呼叫 reviewer，reviewer 的 prompt 可以附上 verifier 的結論一行（不附過程）。
 - **三種審查的 prompt 都把內容貼進去，不給任務檔路徑**：計畫、假設、驗收標準再長也照貼。任務檔的紀錄節有你的處理說明與先前審查的結論，審查者讀到就不獨立。
 - 結果以 `[審查 reviewer @<sha>] 結論：…`／`[審查 verifier @<sha>] 結論：…` 加逐條意見記進任務檔。blocker 必須修（回階段 5 的對應步驟）；major 預設要修，不採納時要寫具體到這個專案的理由，並在交付回報裡逐條列出；minor 可修可記。完整規則見 `references/review.md`「意見分級怎麼處理」。修完只重審改過的部分，最多兩輪，之後停下交使用者。
-- **高風險的審查修正也派新的 implementer**，主流程不自己改（做法見 `references/implement.md`「審查後的修正」）；低／中風險由主流程自己改。
+- **實作時派 implementer 的任務，審查修正也派新的 implementer**（高風險；`implementer=medium` 時含中風險），主流程不自己改（做法見 `references/implement.md`「審查後的修正」）；其餘由主流程自己改。
 - **審查後的修正不做 wip commit**，留在工作目錄，等門檻通過後進交付 commit。這樣交付 commit 一定有內容，也不需要改寫已有的 commit。
 - **回報**：依「階段回報」回報「👀 Step 7 審查：…」；低風險標題寫「低風險，跳過」，內容仍用五欄模板。接著進階段 8。
 

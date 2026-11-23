@@ -16,7 +16,7 @@ doit/
   .claude-plugin/plugin.json
   skills/go/SKILL.md              主流程（/doit:go）
   skills/go/references/           tiering / plan-format / implement / review / ui-verify / retro
-  skills/ask|plan|init|resume|status|abort/  其他指令（/doit:ask、/doit:plan、/doit:init、/doit:resume、/doit:status、/doit:abort）
+  skills/ask|plan|qa|init|resume|status|abort/  其他指令（/doit:ask、/doit:plan、/doit:qa、/doit:init、/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                四個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
@@ -62,10 +62,11 @@ claude --plugin-dir <clone 路徑>/doit
 | `/doit:go <開發指令>` | 新任務 |
 | `/doit:ask <問題>` | 唯讀回答專案相關問題，附來源；不改檔、不建任務 |
 | `/doit:plan <需求>` | 把大需求拆成數個任務，寫成 `.doit/plans/` 下的計畫檔，每個任務附可直接貼的 `/doit:go` 指令；只規劃不實作 |
+| `/doit:qa <QA 回報>` | 診斷 QA 實測回報的問題：定位、實際重現、根因、修法與驗證方法，附可直接貼的 `/doit:go` 指令；只診斷不修改 |
 | `/doit:resume` | 接續未完成任務 |
 | `/doit:status` | 看狀態 |
 | `/doit:abort [原因]` | 中止（會先確認） |
-| `/doit:init [commit=on\|off] [pr=on\|off]` | 專案設定：完成後要不要 commit（預設開）、開 PR（預設關） |
+| `/doit:init [commit=on\|off] [pr=on\|off] [implementer=medium\|high] [implementer_model=…]` | 專案設定：完成後要不要 commit（預設開）、開 PR（預設關）、從哪一級開始派 implementer 實作（預設中風險）、implementer 用的模型（預設跟主 session 相同） |
 
 任務狀態放在目標專案的 `.doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。
 

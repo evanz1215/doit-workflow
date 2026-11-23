@@ -1,6 +1,6 @@
-# 高風險每步派 fresh implementer
+# 每步派 fresh implementer
 
-只有**高風險**任務用。低／中風險在主 context 實作，不讀這份。
+高風險任務一律用；中風險看設定：`implementer=medium`（預設）時用，`implementer=high` 時不用。低風險在主 context 實作，不讀這份。
 
 為什麼：主 context 走到實作時已經累積了探索、釐清與計畫的來回，容易照著自己先前的印象寫而不是照計畫寫。每步交給一個只看得到「這一步」的實作者，做出來的東西只能來自計畫本身；計畫寫得不夠清楚也會在這裡暴露。
 
@@ -21,7 +21,9 @@ implementer 不 commit、不寫任務檔。紀錄與 commit 的順序仍由主 c
 
 每一步用 Agent 工具呼叫一次 `doit:implementer`，**前景執行**，一次只派一個（步驟有先後依賴，不平行）。每步都是新的呼叫，不要用 SendMessage 接續上一步的 implementer。
 
-派之前先 `--set "下一步=步驟 N：等 implementer 回報後核對"`，中斷時才知道停在哪。
+**模型**：設定 `implementer_model` 是 `inherit`（預設）時不帶 `model` 參數，implementer 跟主 session 用同一個模型；是其他值（`fable`／`opus`／`sonnet`／`haiku`）時把它原樣帶進 Agent 工具的 `model` 參數。Agent 工具不接受這個值時，不帶 `model` 重派一次，記 `[紀錄]` 並在這一步的回報告訴使用者。核對一律由主 context 做，不因為換了模型而放寬。
+
+派之前先 `--set "下一步=步驟 N：等 implementer 回報後核對"`，中斷時才知道停在哪；接著照 SKILL.md「階段回報」的規則輸出派工通知，再呼叫 Agent 工具。
 
 prompt 只包含以下內容，**不包含對話、探索過程、你的推理、其他步驟的細節**：
 
@@ -98,7 +100,7 @@ verifier 或 reviewer 的意見決定要修時，**同樣派一個新的 impleme
 - **minor** 決定要修時也走這條路；不值得為它派一次就記下不修並寫理由，列在交付回報。
 - 修完依 `review.md` 的規則重審：verifier 的意見而且動到測試以外的程式碼就重送 verifier，reviewer 的意見就重送 reviewer 只看改過的部分。
 
-低／中風險沒有 implementer，審查修正由主流程自己改。
+實作時沒有派 implementer 的任務（低風險；`implementer=high` 時的中風險），審查修正由主流程自己改。
 
 ## 接續
 
@@ -107,6 +109,6 @@ verifier 或 reviewer 的意見決定要修時，**同樣派一個新的 impleme
 - 未 commit 的檔案都在這一步的清單內 → 從「核對」開始：跑驗證，過了就補第 3、4 拍；不過就照「沒過的處理」派新的 implementer，`## 上一次的結果` 寫「上次中斷，工作目錄保留了部分修改」。
 - 有清單外的檔案 → 照 SKILL.md「接續」的規則問使用者。
 
-## 等級在實作中升到高
+## 等級在實作中升到要派 implementer 的等級
 
-`[升級]` 之後還沒做的步驟改用 implementer；已經做完並有 wip commit 的步驟不重做。
+低升到中（`implementer=medium` 時）或升到高：`[升級]` 之後還沒做的步驟改用 implementer；已經做完並有 wip commit 的步驟不重做。
