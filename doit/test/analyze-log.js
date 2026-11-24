@@ -2,7 +2,7 @@
 // 解析 claude -p --output-format stream-json 的紀錄
 // 用法：node doit/test/analyze-log.js <run.jsonl>
 // 列出每個工具呼叫、subagent 呼叫（[sub]）、hook 擋下（HOOK DENY）、工具錯誤與最終結果，用來稽核沙盒測試是否照 SKILL.md 走。
-// 最後一行統計主流程輸出的階段回報（「### 」加 emoji 開頭的標題）份數與各份的階段 emoji。
+// 最後一行統計主流程輸出的階段回報（卡片「### emoji」與一行回報「- emoji **階段名**」）份數與各份的階段 emoji。
 // 只適用 claude -p 的 stream-json 紀錄；互動 session 的對話紀錄檔不會完整保存接在工具呼叫前的文字，統計會偏少。
 // 再統計兩件審查獨立性的事（都應該是 0）：審查類 prompt 裡出現任務檔／計畫檔路徑的次數、subagent 的工具參數碰到 .doit 的次數。
 const fs = require('fs');
@@ -14,8 +14,10 @@ const tools = new Map(); // id -> {name, summary}
 const events = [];
 let result = null;
 const stageEmojis = []; // 主流程每份階段回報的階段 emoji，依出現順序
-// 「### 」後接一個以上 emoji；有狀態 emoji（❌ ⚠️）在前時，取最後一個（緊貼標題文字的那個）當階段 emoji
-const REPORT_RE = /^###\s+((?:\p{Extended_Pictographic}️?\s+)+)/u;
+// 卡片：「### 」後接 emoji；一行回報：「- emoji **階段名**」。有狀態 emoji（❌ ⚠️）在前時，取最後一個當階段 emoji。
+// 派工通知（🤖）不是階段回報，不算。
+const REPORT_RE = /^(?:###\s+|-\s+)((?:\p{Extended_Pictographic}️?\s+)+)(?=\S)/u;
+const isStageReport = (l) => l.startsWith('#') || /^-\s+\S+\s+\*\*/u.test(l);
 const agentTypes = new Map(); // Agent 工具呼叫的 id -> subagent_type
 const promptLeaks = []; // 審查類 prompt 指向 .doit/tasks 或 .doit/plans 的那幾次（記 subagent_type）
 const subDoitTouches = []; // subagent 的工具參數出現 .doit 的那幾次（記「subagent_type:工具名」）
@@ -54,7 +56,8 @@ for (const line of lines) {
         if (!sub) {
           for (const l of c.text.split(/\r?\n/)) {
             const m = l.match(REPORT_RE);
-            if (m) stageEmojis.push(m[1].trim().split(/\s+/).pop());
+            const emoji = m && m[1].trim().split(/\s+/).pop();
+            if (m && emoji !== '🤖' && isStageReport(l)) stageEmojis.push(emoji);
           }
         }
       }

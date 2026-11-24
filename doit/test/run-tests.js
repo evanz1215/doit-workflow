@@ -201,13 +201,15 @@ const STAGE_EMOJI = ['🧰', '🔍', '❓', '📝', '✋', '🔨', '🧪', '👀
 check('SKILL.md 有「階段回報」模板與十個階段的 emoji', /## 階段回報/.test(skillText) && STAGE_EMOJI.every((e) => skillText.includes(e)));
 STAGE_EMOJI.forEach((e, n) => {
   const sec = (skillText.split(new RegExp(`^## 階段 ${n}：`, 'm'))[1] || '').split(/^## /m)[0];
-  check(`階段 ${n} 段落結尾有回報指示`, /^- \*\*回報\*\*：/m.test(sec) && (sec.includes(`${e} Step ${n}`) || n === 5));
+  check(`階段 ${n} 段落有回報指示且用該階段的 emoji`, /^- \*\*(每步)?回報\*\*：/m.test(sec) && (sec.includes(`- ${e} **`) || sec.includes(`### ${e} `)));
 });
+check('階段回報分一行回報與卡片，不再用 Step N 與五欄模板', /^### 一行回報$/m.test(skillText) && /^### 卡片$/m.test(skillText) && !/Step \d/.test(skillText) && !/五欄/.test(skillText) && !/進度 \{已完成的階段數\}／10：✅/.test(skillText));
+check('還沒解決的問題不能用一行回報；空欄位不寫「無」', /\*\*還沒解決的問題不能用一行回報\*\*/.test(skillText) && /沒有內容的欄位整行不寫/.test(skillText));
 check('SKILL.md 階段 0 讀設定，階段 8 依 commit／pr 設定交付', /log\.js" --config/.test(skillText) && /\*\*`commit=off`\*\*/.test(skillText) && /`pr=off`（預設）/.test(skillText) && !/有 CI 設定（`\.github/.test(skillText));
 check('回報要輸出給使用者、headless 也要、先回報再動下一階段', /不能只寫在思考裡/.test(skillText) && /headless（`claude -p`）也一樣要回報/.test(skillText) && /\*\*先回報，再動下一個階段\*\*/.test(skillText));
-check('go 的回報模板有十個階段的進度清單與符號說明', /進度 \{已完成的階段數\}／10：/.test(skillText) && /\*\*進度清單\*\*/.test(skillText) && ['前置', '探索', '釐清', '計畫', '批准', '實作', '驗證', '審查', '完成', '檢討'].every((s) => new RegExp(`[✅▶⬜] ${s}`, 'u').test(skillText)));
-check('Step 5 回報要直接寫驗證結果', /不要寫「見下一份回報」/.test(skillText));
-check('跳過的階段仍用五欄模板，完成門檻歸 Step 8', /不要改用自由條列/.test(skillText) && /完成門檻檢查是 Step 8 的事/.test(skillText));
+check('卡片有進度列（N／10 加下一站）', /進度 \{已完成的階段數\}／10 · 下一站/.test(skillText));
+check('實作每步回報要直接寫驗證結果', /不要寫「見下一份回報」/.test(skillText));
+check('跳過的階段也回報一行，完成門檻歸階段 8', /⏭ 低風險，跳過/.test(skillText) && /完成門檻檢查是階段 8 的事/.test(skillText));
 check('交付回報每條驗收標準一行', /\*\*每條驗收標準一行\*\*/.test(skillText));
 const reviewText = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'review.md'), 'utf8');
 check('審查意見分級規則：blocker 必須修、major 可不採納但要列進回報', /## 意見分級怎麼處理/.test(reviewText) && /\*\*必須修\*\*，沒有例外/.test(reviewText) && /\*\*預設要修\*\*/.test(reviewText) && !/blocker \/ major 必須/.test(reviewText + skillText));
@@ -226,7 +228,7 @@ check('qa 規定只診斷不修改、不建任務、重現三種結果、交接 
 check('qa 的驗證方法有回歸測試、QA 重測步驟、周邊回歸', ['回歸測試', 'QA 重測步驟', '周邊回歸'].every((s) => qaText.includes(`**${s}**`)));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
 check('plan 規定只規劃不實作、用 --new-plan 建檔、指令帶計畫檔路徑', /不改專案檔案/.test(planText) && /不建立 doit 任務/.test(planText) && /--new-plan/.test(planText) && /\/doit:go 依 \.doit\/plans\//.test(planText));
-check('plan 的回報模板有七個階段的進度清單', /進度 \{已完成的階段數\}／7：/.test(planText) && /\*\*進度清單\*\*/.test(planText));
+check('plan 的回報分一行回報與卡片，卡片有 N／7 進度列', /\*\*一行回報\*\*/.test(planText) && /\*\*卡片\*\*/.test(planText) && /進度 \{已完成的階段數\}／7 · 下一站/.test(planText) && !/進度清單/.test(planText));
 check('go 認得計畫檔：階段 0 讀它、完成時更新任務狀態', /指令提到計畫檔/.test(skillText) && /任務來自計畫檔時/.test(skillText));
 const planFmt = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'plan-format.md'), 'utf8');
 check('計畫格式有「需要你決定」與假設查證狀態', /### 需要你決定/.test(planFmt) && /已查證：/.test(planFmt) && /未查證：/.test(planFmt));
@@ -239,7 +241,7 @@ const implRef = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 
 check('階段 5 依 implementer 設定決定中風險派不派，並帶 implementer_model', /`implementer=medium`（預設）/.test(skillText) && /`implementer=high`/.test(skillText) && /implementer_model/.test(skillText) && /implementer_model/.test(implRef) && !/只有\*\*高風險\*\*任務用/.test(implRef));
 const initText = fs.readFileSync(path.join(PLUGIN, 'skills', 'init', 'SKILL.md'), 'utf8');
 check('init 列出 implementer 與 implementer_model 兩個設定', /^\| `implementer` \|/m.test(initText) && /^\| `implementer_model` \|/m.test(initText) && /^argument-hint:.*implementer_model=/m.test(initText));
-check('派 subagent 前要輸出派工通知，description 要寫具體；implement.md 與 review.md 都指回這條', /\*\*派 subagent 前先輸出派工通知\*\*/.test(skillText) && /🤖 派 doit:implementer/.test(skillText) && /`description` 參數/.test(skillText) && /派工通知/.test(implRef) && /派工通知/.test(reviewText));
+check('派 subagent 前要輸出派工通知，description 要寫具體；implement.md 與 review.md 都指回這條', /\*\*派 subagent 前先輸出派工通知\*\*/.test(skillText) && /- 🤖 \*\*派 doit:implementer\*\*/.test(skillText) && /`description` 參數/.test(skillText) && /派工通知/.test(implRef) && /派工通知/.test(reviewText));
 check('SKILL.md 提到 doit:plan-critic 與 doit:verifier', /doit:plan-critic/.test(skillText) && /doit:verifier/.test(skillText));
 check('SKILL.md 不再說高風險關卡尚未實作', !/高風險專屬關卡（plan-critic/.test(skillText));
 for (const ref of ['tiering', 'plan-format', 'implement', 'review', 'retro', 'ui-verify']) {
@@ -301,10 +303,12 @@ fs.writeFileSync(fakeLog, [
   asst([{ type: 'tool_use', id: 'S4', name: 'Grep', input: { pattern: 'items', path: 'C:\\p', glob: '!.doit/**' } }], 'A2'),
   asst([{ type: 'tool_use', id: 'S5', name: 'Bash', input: { command: 'git -C "C:\\p" diff a0347a7 -- . ":(exclude).doit"' } }], 'A2'),
   asst([{ type: 'tool_use', id: 'A3', name: 'Agent', input: { subagent_type: 'doit:implementer', prompt: '不寫 `.doit/tasks` 底下的檔案' } }]),
+  asst([{ type: 'text', text: '- 🧰 **前置**：基準 42 過 0 敗\n- 🤖 **派 doit:implementer**（步驟 1／2）：x\n  - 🧪 子項不算\n- **做法**：粗體欄位不算\n### ✋ 批准：等你確認計畫 v1\n- 🔨 **實作 1／2**：x → 通過' }]),
 ].join('\n') + '\n');
 const an = spawnSync(process.execPath, [path.join(PLUGIN, 'test', 'analyze-log.js'), fakeLog], { encoding: 'utf8' });
 check('審查 prompt 指向任務檔會被算到（implementer 的 prompt 不算）', an.status === 0 && /審查 prompt 指向任務檔：1 次（doit:plan-critic）/.test(an.stdout), an.stdout + an.stderr);
 check('subagent 讀 .doit 會被算到（路徑裡的 doit-sandbox、排除用的 glob 與 git pathspec 不算）', /subagent 碰到 \.doit：1 次（doit:plan-critic:Read）/.test(an.stdout), an.stdout);
+check('階段回報統計卡片與一行回報，不算派工通知、子項與一般欄位', /階段回報：3 份（🧰 ✋ 🔨）/.test(an.stdout), an.stdout);
 fs.rmSync(fakeLog, { force: true });
 
 const lp = spawnSync(process.execPath, [LOG, '--lesson', 'project'], { cwd: tmp, encoding: 'utf8', input: '### P-001 測試教訓\n- 預防規則：x\n' });
