@@ -434,6 +434,24 @@ const missingNext = statusFiles.flatMap((f) => fs.readFileSync(f, 'utf8').split(
   .map(([, i]) => `${path.relative(PLUGIN, f)}:${i + 1}`));
 check('doit/ 下 .md 與 hooks/*.js 的 --set 狀態= 同一行都帶下一步=', statusFiles.length > 5 && missingNext.length === 0, missingNext.join(', '));
 
+console.log('\n[11] commit guard：gh pr merge 與 bash -c／pwsh -Command 內的 git');
+const gc = (c) => run(path.join(HOOKS, 'guard-commit.js'), bashEvent(c), tmp);
+runLog(['--new', 'shell-wrap', '--set', '下一步=x'], tmp);
+runLog(['--set', '狀態=待批准', '--set', '下一步=等批准'], tmp);
+check('鎖定狀態 bash -c 內的 wip commit 被擋', denied(gc(`bash -c "git commit -m 'wip: x'"`)));
+runLog(['--set', '狀態=已批准', '--set', '下一步=實作'], tmp);
+for (const c of ['gh pr merge 12', 'bash -c "git push"', "sh -c 'git merge x'", 'pwsh -Command "git push"', `bash -c "git commit -m 'feat: x'"`,
+  'bash -l -c "git push"', "powershell.exe -NoProfile -Command 'git push'", 'bash -c "sh -c \\"git push\\""']) {
+  check(`未完成時被擋：${c}`, denied(gc(c)));
+}
+for (const c of [`bash -c "git commit -m 'wip: x'"`, 'bash -c "git status"', 'gh pr view', 'gh pr create --fill', `node log.js "[紀錄] 擋 bash -c 'git push' 與 gh pr merge"`]) {
+  check(`已批准時放行：${c}`, allowed(gc(c)));
+}
+check('gh pr merge 的拒絕訊息是 [doit] 開頭', /^\[doit\].*gh pr merge/.test(((gc('gh pr merge 12').json || {}).hookSpecificOutput || {}).permissionDecisionReason || ''));
+runLog(['--close', '完成', '[紀錄] 門檻通過'], tmp);
+check('任務完成後 gh pr merge 放行', allowed(gc('gh pr merge 12')));
+check('任務完成後 bash -c "git push" 放行', allowed(gc('bash -c "git push"')));
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failures ? `\n${failures} 個失敗` : '\n全部通過');
 process.exit(failures ? 1 : 0);
