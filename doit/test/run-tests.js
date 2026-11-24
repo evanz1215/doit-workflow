@@ -197,13 +197,17 @@ for (const sk of ['go', 'ask', 'plan', 'init', 'resume', 'status', 'abort']) {
   check(`skills/${sk}/SKILL.md 存在且 name 一致`, new RegExp(`^---\\n[\\s\\S]*?^name:\\s*${sk}\\s*$`, 'm').test(t));
   if (sk !== 'go') check(`${sk} 只能由使用者觸發`, /^disable-model-invocation:\s*true\s*$/m.test(t));
 }
-const STAGE_EMOJI = ['🧰', '🔍', '❓', '📝', '✋', '🔨', '🧪', '👀', '📦', '🪞'];
+const STAGE_EMOJI = ['🧰', '🔍', '❓', '📝', '✋', '🔨', '🧪', '👀', '📦', '💡'];
 check('SKILL.md 有「階段回報」模板與十個階段的 emoji', /## 階段回報/.test(skillText) && STAGE_EMOJI.every((e) => skillText.includes(e)));
 STAGE_EMOJI.forEach((e, n) => {
   const sec = (skillText.split(new RegExp(`^## 階段 ${n}：`, 'm'))[1] || '').split(/^## /m)[0];
   check(`階段 ${n} 段落有回報指示且用該階段的 emoji`, /^- \*\*(每步)?回報\*\*：/m.test(sec) && (sec.includes(`- ${e} **`) || sec.includes(`### ${e} `)));
 });
 check('階段回報分一行回報與卡片，不再用 Step N 與五欄模板', /^### 一行回報$/m.test(skillText) && /^### 卡片$/m.test(skillText) && !/Step \d/.test(skillText) && !/五欄/.test(skillText) && !/進度 \{已完成的階段數\}／10：✅/.test(skillText));
+const stage8 = (skillText.split(/^## 階段 8：/m)[1] || '').split(/^## /m)[0];
+const stage9 = (skillText.split(/^## 階段 9：/m)[1] || '').split(/^## /m)[0];
+check('交付卡片是最後一則訊息，檢討併在卡片最後一行；先檢討再輸出卡片', /\*\*整個任務的最後一則訊息\*\*/.test(skillText) && /交付卡片之後不再輸出任何總結或補充文字/.test(skillText) && /先不要輸出交付卡片/.test(stage8) && /放在階段 8 交付卡片的最後一行/.test(stage9));
+check('進度列說明等批准是 4／10', /等批准時前置、探索、釐清、計畫做完是 4／10/.test(skillText));
 check('還沒解決的問題不能用一行回報；空欄位不寫「無」', /\*\*還沒解決的問題不能用一行回報\*\*/.test(skillText) && /沒有內容的欄位整行不寫/.test(skillText));
 check('SKILL.md 階段 0 讀設定，階段 8 依 commit／pr 設定交付', /log\.js" --config/.test(skillText) && /\*\*`commit=off`\*\*/.test(skillText) && /`pr=off`（預設）/.test(skillText) && !/有 CI 設定（`\.github/.test(skillText));
 check('回報要輸出給使用者、headless 也要、先回報再動下一階段', /不能只寫在思考裡/.test(skillText) && /headless（`claude -p`）也一樣要回報/.test(skillText) && /\*\*先回報，再動下一個階段\*\*/.test(skillText));

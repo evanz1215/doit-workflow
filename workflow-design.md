@@ -21,7 +21,7 @@
 | references 有 `unattended.md` | 沒有；多了 `ui-verify.md` |
 | Greenfield 模式與慣例檔 | 尚未實作（v0.4） |
 | 一律 commit；有 CI 才開 PR | 由 `/doit:init` 設定：`commit` 預設開、`pr` 預設關，存在 `.doit/config.json` |
-| 階段回報 3–5 行 | 每階段固定模板加 emoji（🧰🔍❓📝✋🔨🧪👀📦🪞），規則在 SKILL.md「階段回報」 |
+| 階段回報 3–5 行 | 分層：例行階段一行、要使用者看的節點（釐清疑問、批准、交付、停下）用卡片；交付卡片是最後一則訊息，檢討併在卡片最後一行。階段 emoji 🧰🔍❓📝✋🔨🧪👀📦💡，規則在 SKILL.md「階段回報」 |
 
 hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔、`bash -c "git push"`、`gh pr merge` 都擋不到。
 
