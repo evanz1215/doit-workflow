@@ -9,7 +9,10 @@
 
 v0.2 範圍：低／中／高風險、brownfield、一般模式、plan-critic／implementer／verifier／reviewer、瀏覽器 UI 驗證、hooks 擋改檔與 commit、任務檔、接續。
 
-hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔（`sed -i`、重導向）、`bash -c "git push"`、`gh pr merge` 都擋不到。
+hooks 防的是流程漂移，不是刻意繞過。剩餘限制：
+
+- 用 Bash 改檔（`sed -i`、重導向）只在實作開始前（分支尚未建立）由 guard-dirty 事後抓到：指令已經執行，要 agent 自己還原；實作開始後回到鎖定狀態時用 Bash 改檔抓不到。
+- `bash -lc` 合寫旗標、pwsh 帶值的選項（如 `-ExecutionPolicy Bypass -Command`）、`cmd /c git`、PowerShell `& git push`／`Start-Process git`、`eval`、腳本檔內呼叫 git、`gh pr create`、`gh pr -R x merge` 擋不到。
 
 ```
 doit/
@@ -18,10 +21,11 @@ doit/
   skills/go/references/           tiering / plan-format / implement / review / ui-verify / retro
   skills/ask|plan|qa|init|resume|status|abort/  其他指令（/doit:ask、/doit:plan、/doit:qa、/doit:init、/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
-  hooks/hooks.json                四個 hook 的註冊
+  hooks/hooks.json                五個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
   hooks/guard-commit.js           未完成不得交付 commit / push / merge
-  hooks/guard-stop.js             離開前必須填「下一步」
+  hooks/guard-stop.js             離開前必須填「下一步」（改狀態沒帶下一步會被清空）
+  hooks/guard-dirty.js            實作開始前 Bash 指令跑完工作目錄要乾淨
   hooks/session-start.js          有未完成任務時提示
   tools/log.js                    任務檔唯一寫入工具
   test/run-tests.js               hooks 與 log.js 的測試

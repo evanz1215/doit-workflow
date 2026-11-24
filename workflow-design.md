@@ -17,14 +17,14 @@
 | 步驟依序實作，每步只依賴前面的步驟 | v0.2.9 起實作步驟表多「依賴」欄；依賴都已完成、改檔不交集、驗證是窄驗證的步驟可同一批平行派 implementer，核對、紀錄與 wip commit 仍由主 context 依編號逐步做（`implement.md`「平行派工」） |
 | 審查在背景 subagent 跑 | 前景執行，等結果回來 |
 | 迭代上限 hook、任務檔「迭代」欄 | 尚未實作（v0.3） |
-| Stop hook 檢查「下一步」為空或與狀態不符 | 只檢查為空，且只在這個 session 動過任務時才擋 |
+| Stop hook 檢查「下一步」為空或與狀態不符 | 只檢查為空；改狀態沒同時寫下一步時 log.js 會清空它（v0.2.10），用清空取代比對；只在這個 session 動過任務時才擋 |
 | `[錯誤]` 分類：需求／實作／工具 | 多了 環境、流程 |
 | references 有 `unattended.md` | 沒有；多了 `ui-verify.md` |
 | Greenfield 模式與慣例檔 | 尚未實作（v0.4） |
 | 一律 commit；有 CI 才開 PR | 由 `/doit:init` 設定：`commit` 預設開、`pr` 預設關，存在 `.doit/config.json` |
 | 階段回報 3–5 行 | 分層：例行階段一行、要使用者看的節點（釐清疑問、批准、交付、停下）用卡片；交付卡片是最後一則訊息，檢討併在卡片最後一行。階段 emoji 🧰🔍❓📝✋🔨🧪👀📦💡，規則在 SKILL.md「階段回報」 |
 
-hooks 防的是流程漂移，不是刻意繞過：用 Bash 改檔、`bash -c "git push"`、`gh pr merge` 都擋不到。
+hooks 防的是流程漂移，不是刻意繞過。剩餘限制：用 Bash 改檔只在實作開始前（分支尚未建立）由 guard-dirty 事後抓到，指令已執行、要 agent 自己還原；實作開始後回到鎖定狀態時抓不到。`bash -lc` 等合寫旗標、pwsh 帶值的選項、`cmd /c git`、PowerShell `& git push`／`Start-Process git`、`eval`、腳本檔內呼叫 git、`gh pr create`、`gh pr -R x merge` 擋不到。
 
 ## 1. 已拍板的決定
 
@@ -347,6 +347,7 @@ doit/
     guard-edit.js
     guard-commit.js
     guard-stop.js
+    guard-dirty.js
     session-start.js
   tools/
     log.js
