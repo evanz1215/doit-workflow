@@ -7,7 +7,7 @@
 
 ## `doit/`：Claude Code plugin（v0.2）
 
-v0.2 範圍：低／中／高風險、brownfield、一般模式、plan-critic／implementer／verifier／reviewer、瀏覽器 UI 驗證、hooks 擋改檔與 commit、任務檔、接續。
+v0.2 範圍：低／中／高風險、brownfield、一般模式、plan-critic／implementer（互不相干的步驟可平行派）／verifier／reviewer、瀏覽器 UI 驗證、hooks 擋改檔與 commit、任務檔、接續。
 
 hooks 防的是流程漂移，不是刻意繞過。剩餘限制：
 
@@ -23,7 +23,7 @@ doit/
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                五個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
-  hooks/guard-commit.js           未完成不得交付 commit / push / merge
+  hooks/guard-commit.js           未完成不得交付 commit / push / merge（含 gh pr merge、bash -c 引號內的 git）
   hooks/guard-stop.js             離開前必須填「下一步」（改狀態沒帶下一步會被清空）
   hooks/guard-dirty.js            實作開始前 Bash 指令跑完工作目錄要乾淨
   hooks/session-start.js          有未完成任務時提示
