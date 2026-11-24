@@ -1,5 +1,5 @@
 {
-  "description": "doit 工作流的硬規則：未批准不改檔、未完成不交付 commit / push / merge、離開前存狀態、開 session 提示未完成任務。",
+  "description": "doit 工作流的硬規則：未批准不改檔（含用 Bash 寫檔：實作開始前指令跑完工作目錄要乾淨）、未完成不交付 commit / push / merge、離開前存狀態、開 session 提示未完成任務。",
   "hooks": {
     "PreToolUse": [
       {
@@ -20,6 +20,19 @@
             "type": "command",
             "command": "node",
             "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard-commit.js"],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard-dirty.js"],
             "timeout": 10
           }
         ]
