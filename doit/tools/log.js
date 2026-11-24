@@ -43,6 +43,8 @@ plugin 目錄常常不在 session 的允許目錄內，Read 會被擋；這個�
   base      base 分支
   起始SHA   git rev-parse HEAD
   下一步    一句話，接續時第一件要做的事（Stop hook 檢查它不能為空）
+            --set 狀態 改成不同的值（完成、中止除外）而同一次沒帶 --set 下一步=… 時，下一步會被清空；
+            改狀態時請一起寫下一步
 
 紀錄行標籤：
   [完成] 步驟 N：…
@@ -429,6 +431,11 @@ function main() {
 
   const fields = { ...task.fields };
   applySets(fields, args.sets);
+  // 換了狀態卻沒同時寫下一步：舊的下一步多半已過期，清空讓 guard-stop 逼 agent 重寫
+  const sets = new Map(args.sets);
+  const newStatus = sets.get('狀態');
+  if (newStatus !== undefined && newStatus !== task.fields['狀態'] && !sets.has('下一步') &&
+      ![lib.STATUS.DONE, lib.STATUS.ABORTED].includes(newStatus)) fields['下一步'] = '';
 
   for (const l of args.lines) {
     if (!TAG_RE.test(l)) die(`紀錄行格式不符：${l}\n合法標籤見 --help`);

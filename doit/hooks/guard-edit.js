@@ -26,7 +26,7 @@ const unattendedLow = task.fields['無人看管'] === '是' && task.fields['等�
 if (lib.LOCKED_STATUSES.includes(status) && !unattendedLow) {
   lib.denyPreToolUse(
     `[doit] 任務 ${task.name} 狀態為「${status}」，計畫尚未批准，不得修改專案檔案 ${lib.normalize(filePath)}。` +
-    `先取得使用者明確批准，並用 log.js --set 狀態=已批准 更新任務檔。`
+    `先取得使用者明確批准，並用 log.js --set 狀態=已批准 --set "下一步=開分支並做步驟 1" 更新任務檔。`
   );
 }
 

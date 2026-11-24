@@ -411,6 +411,29 @@ runLog(['--set', '等級=中'], tmp);
 check('auto+中 → edit 被擋', denied(run(path.join(HOOKS, 'guard-edit.js'), editEvent(srcFile), tmp)));
 runLog(['--close', '中止', '[停止] 測試結束'], tmp);
 
+console.log('\n[10] 改狀態沒帶下一步 → 下一步清空');
+const nextStep = () => (taskText().match(/^下一步: ?(.*)$/m) || [])[1];
+runLog(['--new', 'next-step', '--set', '下一步=探索'], tmp);
+runLog(['--set', '狀態=待使用者'], tmp);
+check('改狀態沒帶下一步 → 下一步變空', nextStep() === '', nextStep());
+check('下一步被清空後 stop 被擋', (run(path.join(HOOKS, 'guard-stop.js'), stopEvent(false), tmp).json || {}).decision === 'block');
+runLog(['--set', '狀態=待批准', '--set', '下一步=等使用者批准計畫 v1'], tmp);
+check('改狀態同時帶下一步 → 保留新值', nextStep() === '等使用者批准計畫 v1', nextStep());
+runLog(['--set', '下一步=開分支', '--set', '狀態=已批准'], tmp);
+check('下一步寫在狀態前面也保留', nextStep() === '開分支', nextStep());
+runLog(['--set', '狀態=已批准'], tmp);
+check('狀態值沒變 → 不清空', nextStep() === '開分支', nextStep());
+runLog(['--close', '完成', '[紀錄] 門檻通過'], tmp);
+check('--close 完成 → 不清空', nextStep() === '開分支', nextStep());
+check('--help 說明改狀態會清空下一步', /下一步會被清空/.test(help.out));
+// 規則文字：每個 `--set 狀態=` 範例或訊息同一行都要帶 `下一步=`（--close 不在此列）
+const walkMd = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walkMd(path.join(d, e.name)) : e.name.endsWith('.md') ? [path.join(d, e.name)] : []);
+const statusFiles = [...walkMd(PLUGIN), ...fs.readdirSync(HOOKS).filter((f) => f.endsWith('.js')).map((f) => path.join(HOOKS, f))];
+const missingNext = statusFiles.flatMap((f) => fs.readFileSync(f, 'utf8').split(/\r?\n/).map((l, i) => [l, i])
+  .filter(([l]) => (l.match(/--set "?狀態=/g) || []).length > (l.match(/下一步=/g) || []).length)
+  .map(([, i]) => `${path.relative(PLUGIN, f)}:${i + 1}`));
+check('doit/ 下 .md 與 hooks/*.js 的 --set 狀態= 同一行都帶下一步=', statusFiles.length > 5 && missingNext.length === 0, missingNext.join(', '));
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failures ? `\n${failures} 個失敗` : '\n全部通過');
 process.exit(failures ? 1 : 0);
