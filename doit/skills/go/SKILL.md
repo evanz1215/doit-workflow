@@ -176,6 +176,7 @@ Claude Code 會在執行前靜態檢查 Bash 指令，複合指令常被擋下�
 - 從 `package.json` / `pyproject.toml` / `Makefile` / `go.mod` / CI 設定找測試、lint、型別檢查、build 指令，**記下來源檔案**。找不到的不猜，列為「無基準」並在計畫中標明。
 - **執行任何指令前先看副作用**：會寫 DB、打外部服務、寄信、刪資料的，只在確認目標是本機或測試環境時才跑；無法確認就不跑，記為未驗證。
 - 跑一次基準檢查（lint + 相關測試；夠快就全跑），結果寫進任務檔 `## 基準檢查`。
+- 跑完基準再跑一次 `git status --porcelain`。有測試或 build 留下的產物，列給使用者，請使用者決定刪除、加進 `.gitignore`，或加進 `.git/info/exclude`（只影響本機），處理乾淨再建任務；不要替使用者刪檔。原因：建任務後到實作開始前，guard-dirty 會把工作目錄的任何變更當違規擋下。
 - **基準指令被工具權限擋下**（訊息含「requires approval」「can't be checked」「was blocked」）：這不是指令錯，是 Claude Code 的安全檢查。先試一次改寫：單一指令、不串接、可執行檔與路徑都寫絕對路徑字面值、不用變數、輸出用 `> log 2>&1` 導到 scratchpad。還是被擋就在 `## 基準檢查` 記「被權限擋下：<確切指令>」，並在給使用者的回報裡列出這條指令與需要的權限（例如 `Bash(msbuild:*)`），請使用者放行後重跑或接受無基準。**不要**自行改走替代方案（自建 harness、改用別的建置工具）來取代基準，替代方案只能是額外證據。
 - 讀設定：`node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --config`，記下 `commit`、`pr`、`implementer`、`implementer_model`（沒有設定檔時是預設值 commit=on、pr=off、implementer=medium、implementer_model=inherit）。階段 5 的檢查點與派工、階段 8 的交付都照它做，批准請求裡要寫明 commit／pr。
 - 讀教訓檔：`node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --lessons` 會印出專案（`.doit/LESSONS.md`）與全域（`~/.doit/LESSONS.md`）兩份；全域檔在專案目錄外，不要用 cat 或 Read 直接讀。挑相關條目照做。
@@ -193,7 +194,7 @@ Claude Code 會在執行前靜態檢查 Bash 指令，複合指令常被擋下�
 - 找出被修改函式／介面的**所有呼叫者**，寫進任務檔 `## 影響範圍`。這是分級依據。
 - 使用既有函式前看實際回傳值與錯誤路徑，不憑名稱猜。
 - 查外部文件前先看 lock 檔確認實際安裝版本。
-- 探索中發現階段 0 沒跑到的相關測試，**改任何程式碼之前**補跑，追加到基準。
+- 探索中發現階段 0 沒跑到的相關測試，**改任何程式碼之前**補跑，追加到基準；補跑後同樣確認 `git status` 乾淨，有產物照階段 0 的處理問使用者。
 - **回報**：依「階段回報」輸出一行「- 🔍 **探索**：…」（呼叫者與相關測試放子項），接著進階段 2。
 
 ## 階段 2：釐清需求

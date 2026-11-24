@@ -23,8 +23,9 @@
 | Greenfield 模式與慣例檔 | 尚未實作（v0.4） |
 | 一律 commit；有 CI 才開 PR | 由 `/doit:init` 設定：`commit` 預設開、`pr` 預設關，存在 `.doit/config.json` |
 | 階段回報 3–5 行 | 分層：例行階段一行、要使用者看的節點（釐清疑問、批准、交付、停下）用卡片；交付卡片是最後一則訊息，檢討併在卡片最後一行。階段 emoji 🧰🔍❓📝✋🔨🧪👀📦💡，規則在 SKILL.md「階段回報」 |
+| （設計稿沒有） | v0.2.10 新增 guard-dirty（PostToolUse，實作開始前 Bash 指令跑完工作目錄要乾淨，事後抓）；guard-commit 會解析 `bash\|sh\|zsh -c`、`pwsh -Command` 引號內的指令，並擋 `gh pr merge` |
 
-hooks 防的是流程漂移，不是刻意繞過。剩餘限制：用 Bash 改檔只在實作開始前（分支尚未建立）由 guard-dirty 事後抓到，指令已執行、要 agent 自己還原；實作開始後回到鎖定狀態時抓不到。`bash -lc` 等合寫旗標、pwsh 帶值的選項、`cmd /c git`、PowerShell `& git push`／`Start-Process git`、`eval`、腳本檔內呼叫 git、`gh pr create`、`gh pr -R x merge` 擋不到。
+hooks 防的是流程漂移，不是刻意繞過。剩餘限制：用 Bash 改檔只在實作開始前（分支尚未建立）由 guard-dirty 事後抓到，指令已執行，確定是 agent 造成的才由 agent 還原，否則問使用者；實作開始後回到鎖定狀態時抓不到；實作開始前測試或 build 留下未被 gitignore 的產物、或使用者自己改的檔案也會被擋，不清掉就每次 Bash／PowerShell 呼叫都再擋，需使用者處理或加進 `.git/info/exclude`。`bash -lc` 等合寫旗標、pwsh 帶值的選項、`cmd /c git`、PowerShell `& git push`／`Start-Process git`、`eval`、腳本檔內呼叫 git、gh 帶值的選項（`gh --repo x pr merge`、`gh -R x pr merge`、`gh pr -R x merge`）、大寫 `GH pr merge` 擋不到。
 
 ## 1. 已拍板的決定
 

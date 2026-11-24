@@ -3,7 +3,8 @@
 // PostToolUse (Bash|PowerShell)
 // 硬規則 1 的補強：guard-edit 只管 Edit/Write，用 Bash 寫檔（sed -i、> 重導向、腳本）擋不到。
 // 計畫未批准、實作還沒開始（分支尚未建立）時，工作目錄不該有任何專案檔變更；
-// 指令跑完後若 git status 不乾淨，把 block 訊息送回模型，要它記錯並處理。
+// 指令跑完後若 git status 不乾淨，把 block 訊息送回模型：確定是自己造成的才記錯並還原已追蹤檔，
+// 分不出來源或可能是使用者改的就不記錯、不還原，列出變更問使用者。
 // 實作開始後又回到鎖定狀態（例如待使用者）刻意不檢查：那時的變更是實作產物。
 // 例外：無人看管模式且等級為低（同 guard-edit）。
 
@@ -36,7 +37,7 @@ const listed = dirty.slice(0, MAX).join('\n') + (dirty.length > MAX ? `\n…（�
 const logJs = lib.normalize(path.join(process.env.CLAUDE_PLUGIN_ROOT || path.resolve(__dirname, '..'), 'tools', 'log.js'));
 lib.blockStop(
   `[doit] 任務 ${task.name} 狀態為「${status}」，計畫還沒批准、實作還沒開始，工作目錄不該有專案檔變更，但 git status 有：\n${listed}\n` +
-  `請先用 node "${logJs}" "[錯誤 來源：agent 分類：流程] <哪個指令改了什麼>" 記一行。` +
-  `只還原這個 session 自己用工具寫出的已追蹤檔案（例如 git checkout -- <檔>）；` +
-  `未追蹤的檔案，或分不出是誰改的變更，列出來停下問使用者，不要刪也不要還原。`
+  `確定是這個 session 剛跑的指令造成的：先用 node "${logJs}" "[錯誤 來源：agent 分類：流程] <哪個指令改了什麼>" 記一行，` +
+  `只還原這個 session 自己用工具寫出的已追蹤檔案（例如 git checkout -- <檔>）；未追蹤的檔案列出來問使用者，不要刪。` +
+  `分不出是誰改的、或可能是使用者自己改的：不記錯誤、不還原，列出變更停下問使用者。`
 );

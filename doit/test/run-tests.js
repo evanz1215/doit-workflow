@@ -476,6 +476,7 @@ const gdTracked = gd();
 const reason = (gdTracked.json || {}).reason || '';
 check('探索中＋已追蹤檔被改 → block', blocked(gdTracked), gdTracked.out);
 check('block 訊息含檔名與規定字樣', reason.startsWith('[doit]') && reason.includes('README.md') && reason.includes('[錯誤') && reason.includes('只還原這個 session 自己') && /未追蹤[\s\S]*問使用者/.test(reason), reason);
+check('block 訊息分兩段：確定是自己造成才記錯，分不出就不記錯誤不還原', reason.includes('確定是這個 session 剛跑的指令造成') && /分不出是誰改的[^。]*不記錯誤、不還原/.test(reason), reason);
 cleanTracked();
 fs.writeFileSync(path.join(dt, 'new.js'), 'x\n');
 const gdNew = gd();
