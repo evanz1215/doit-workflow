@@ -251,6 +251,11 @@ check('SKILL.md 不再說高風險關卡尚未實作', !/高風險專屬關卡�
 for (const ref of ['tiering', 'plan-format', 'implement', 'review', 'retro', 'ui-verify']) {
   check(`references/${ref}.md 存在且 SKILL.md 有引用`, fs.existsSync(path.join(PLUGIN, 'skills', 'go', 'references', `${ref}.md`)) && skillText.includes(`references/${ref}.md`));
 }
+check('plan-format 步驟表有「依賴」欄，寫明同批條件與舊任務一律依序', planFmt.includes('| 步 | 做什麼 | 改哪些檔案 | 依賴 | 這一步的驗證 | 對應標準 |') && /^- \*\*依賴\*\*：/m.test(planFmt) && planFmt.includes('兩兩沒有交集') && planFmt.includes('沒有「依賴」欄（舊任務）時一律當成依序'));
+const implResume = (implRef.split(/^## 接續/m)[1] || '').split(/^## /m)[0];
+check('implement.md 有「平行派工」一節：同一則訊息派、依編號核對、合併驗證、只 add 該步檔案、單獨重派、接續；不再寫「不平行」', /^## 平行派工$/m.test(implRef) && ['**同一則訊息**', '依步驟編號逐一', '平行批次合併驗證', '只 `git add` 這一步清單內的檔案', '**單獨**重派'].every((s) => implRef.includes(s)) && implResume.includes('中斷在平行批次中') && !implRef.includes('不平行'));
+check('SKILL.md 階段 3、5 寫明依賴欄與平行例外，plan-critic 檢查依賴欄', !skillText.includes('一次只派一個') && skillText.includes('平行派工的同批步驟由 implementer 同時做第 1、2 拍') && skillText.includes('每步填「依賴」欄') && fs.readFileSync(path.join(PLUGIN, 'agents', 'plan-critic.md'), 'utf8').includes('「**依賴**」欄有沒有漏寫'));
+check('implementer 平行時不碰別步檔案，清單外原因回報受阻', implText.includes('同批其他步驟的檔案會在你工作時被修改') && implText.includes('回報「受阻」並寫明是哪個檔案'));
 
 console.log('\n[4c] --ref：Read 被權限擋下時仍讀得到參考檔');
 const refList = runLog(['--ref'], tmp);
