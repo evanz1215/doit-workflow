@@ -163,7 +163,7 @@ check('合法紀錄行', runLog(['[完成] 步驟 1：x', '[證據 標準1] npm 
 check('錯誤標籤', runLog(['[錯誤 來源：agent 分類：實作] 忘了跑測試'], tmp).code === 0);
 const show = runLog(['--show'], tmp);
 check('--show 有狀態', /狀態: /.test(show.out));
-check('紀錄行有時間戳', /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] \[完成\] 步驟 1/.test(taskText()));
+check('紀錄行有時間戳（到秒）', /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] \[完成\] 步驟 1/.test(taskText()));
 runLog(['--set', '狀態=待批准'], tmp);
 check('狀態變更自動留紀錄', /\[紀錄\] 狀態 → 待批准/.test(taskText()));
 const lessons = runLog(['--lessons'], tmp);
@@ -238,6 +238,8 @@ check('qa 規定只診斷不修改、不建任務、重現三種結果、交接 
 check('qa 的驗證方法有回歸測試、QA 重測步驟、周邊回歸', ['回歸測試', 'QA 重測步驟', '周邊回歸'].every((s) => qaText.includes(`**${s}**`)));
 const explainText = fs.readFileSync(path.join(PLUGIN, 'skills', 'explain', 'SKILL.md'), 'utf8');
 check('explain 只讀、用 --new-report 建檔、不建任務', /只讀不改/.test(explainText) && /--new-report/.test(explainText) && /不建立 doit 任務/.test(explainText) && /disable-model-invocation: true/.test(explainText));
+const retroText = fs.readFileSync(path.join(PLUGIN, 'skills', 'retro', 'SKILL.md'), 'utf8');
+check('retro 跨任務：用 --timing --all 與 --lessons、教訓先問再寫、可指定單一任務', /--timing --all/.test(retroText) && /--lessons/.test(retroText) && /教訓檔先問再寫/.test(retroText) && /references\/retro\.md/.test(retroText) && /disable-model-invocation: true/.test(retroText));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
 check('plan 規定只規劃不實作、用 --new-plan 建檔、指令帶計畫檔路徑', /不改專案檔案/.test(planText) && /不建立 doit 任務/.test(planText) && /--new-plan/.test(planText) && /\/doit:go 依 \.doit\/plans\//.test(planText));
 check('plan 的回報分一行回報與卡片，卡片有 N／7 進度列', /\*\*一行回報\*\*/.test(planText) && /\*\*卡片\*\*/.test(planText) && /進度 \{已完成的階段數\}／7 · 下一站/.test(planText) && !/進度清單/.test(planText));
@@ -528,6 +530,38 @@ runLog(['--set', '等級=中'], dt);
 check('無人看管＋中＋有變更 → block', blocked(gd()));
 runLog(['--close', '中止', '[停止] 測試結束'], dt);
 fs.rmSync(dt, { recursive: true, force: true });
+
+console.log('\n[13] log.js --timing：從時間戳算耗時');
+const tt = fs.mkdtempSync(path.join(os.tmpdir(), 'doit-timing-'));
+fs.mkdirSync(path.join(tt, STATE, 'tasks'), { recursive: true });
+fs.mkdirSync(path.join(tt, STATE, 'archive', 'old'), { recursive: true });
+// 舊格式（只到分鐘）與新格式（到秒）混用
+const timingTask = [
+  '# 任務', '- 狀態：完成', '', '## 紀錄',
+  '[2026-11-25 10:00] [紀錄] 任務建立',
+  '[2026-11-25 10:05:30] [審查 plan-critic @v1] 結論：可送批准',
+  '[2026-11-25 10:06:00] [紀錄] 狀態 → 待批准',
+  '[2026-11-25 10:09:00] [紀錄] 狀態 → 實作中',
+  '[2026-11-25 10:11:15] [完成] 步驟 1：a',
+  '[2026-11-25 10:14:00] [完成] 步驟 2：b',
+  '[2026-11-25 10:14:00] [紀錄] 狀態 → 待審查',
+  '[2026-11-25 10:20:00] [審查 reviewer @abc1234] 結論：通過',
+  '[2026-11-25 10:20:00] [紀錄] 狀態 → 完成',
+  '',
+].join('\n');
+fs.writeFileSync(path.join(tt, STATE, 'tasks', 't1.md'), timingTask);
+fs.writeFileSync(path.join(tt, STATE, 'archive', 'old', 't0.md'), timingTask);
+fs.writeFileSync(path.join(tt, STATE, 'archive', 'old', 'notes.md'), '# 不是任務檔\n');
+fs.writeFileSync(path.join(tt, STATE, 'ACTIVE'), 't1.md\n');
+const tm = runLog(['--timing'], tt);
+check('--timing 算出總時間與 agent／等使用者', tm.code === 0 && /總 20m00s（agent 17m00s、等使用者 3m00s）/.test(tm.out), tm.out + tm.err);
+check('--timing 各階段（秒數正確、等使用者加 *、不列完成）', /探索中 6m00s \| 待批准 3m00s\* \| 實作中 5m00s \| 待審查 6m00s（/.test(tm.out) && !/完成 /.test(tm.out), tm.out);
+check('--timing 每步耗時與審查輪數', /步驟：1 2m15s \| 2 2m45s/.test(tm.out) && /審查輪數：plan-critic 1 \| reviewer 1/.test(tm.out), tm.out);
+const ta = runLog(['--timing', '--all'], tt);
+check('--timing --all 含 archive、略過非任務檔、彙整排序', ta.code === 0 && /合計 2 個任務：總 40m00s/.test(ta.out) && /各階段由多到少：探索中 12m00s（30%）/.test(ta.out) && !/notes\.md/.test(ta.out), ta.out + ta.err);
+fs.rmSync(path.join(tt, STATE, 'ACTIVE'));
+check('--timing 沒有任務時失敗並提示 --all', runLog(['--timing'], tt).code !== 0);
+fs.rmSync(tt, { recursive: true, force: true });
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failures ? `\n${failures} 個失敗` : '\n全部通過');

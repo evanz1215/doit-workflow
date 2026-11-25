@@ -14,6 +14,7 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --new <slug> [--set 欄位=值 ...]        建立任務檔與 ACTIVE（自動把 .doit/ 加進 .git/info/exclude）
   node log.js [--set 欄位=值 ...] "[標籤] 文字" ...     追加紀錄行到「## 紀錄」小節、更新頂端欄位
   node log.js --show                                   印出頂端欄位與檔案路徑
+  node log.js --timing [--all]                         從紀錄行時間戳算各階段耗時、每步耗時、審查輪數；--all 彙整 .doit/tasks 與 archive 下所有任務
   node log.js --close 完成|中止 ["[標籤] 文字"]         結束任務（狀態改為完成／中止）
   node log.js --lessons                                印出專案與全域教訓檔內容
   node log.js --lesson project|global < 內容            把一條教訓（stdin，markdown）追加到專案或全域教訓檔
@@ -125,6 +126,10 @@ function parseArgs(argv) {
     } else if (a === '--new') {
       out.new = argv[++i];
       if (!out.new) die('--new 需要 slug');
+    } else if (a === '--timing') {
+      out.timing = true;
+    } else if (a === '--all') {
+      out.all = true;
     } else if (a === '--show') {
       out.show = true;
     } else if (a === '--lessons') {
@@ -348,6 +353,100 @@ function newDoc(root, rawSlug, subdir, kind, title, headLines, sections) {
 const PLAN_SECTIONS = ['需求原文', '現況', '做法', '需要你決定', '假設', '任務清單', '範圍外', '風險與未知', '變更紀錄'];
 const REPORT_SECTIONS = ['分析目標', '結論', '職責', '對外介面', '誰在用', '運作流程', '依賴', '邊界與風險', '測試', '依據', '不確定的地方'];
 
+// ---- 耗時：只讀紀錄行的時間戳，不另外記錄 ----
+// 舊任務檔的時間戳只到分鐘，新的到秒，兩種都收
+const STAMP_RE = /^\[(\d{4}-\d\d-\d\d) (\d\d:\d\d)(:\d\d)?\] (.*)$/;
+const WAIT_STATUSES = [lib.STATUS.WAIT_APPROVAL, lib.STATUS.WAIT_USER];
+
+function fmtDur(ms) {
+  const s = Math.round(ms / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h ? `${h}h${m}m` : m ? `${m}m${String(sec).padStart(2, '0')}s` : `${sec}s`;
+}
+
+function timingOf(text) {
+  const events = [];
+  for (const l of text.split(/\r?\n/)) {
+    const m = l.match(STAMP_RE);
+    if (m) events.push({ t: new Date(`${m[1]}T${m[2]}${m[3] || ':00'}`).getTime(), msg: m[4] });
+  }
+  if (!events.length) return null;
+  const stages = new Map(); // 狀態 → 毫秒，保留第一次出現的順序
+  const steps = [];
+  const rounds = {};
+  let cur = lib.STATUS.EXPLORING, since = events[0].t, lastMark = null;
+  const add = (k, v) => stages.set(k, (stages.get(k) || 0) + v);
+  for (const e of events) {
+    const s = e.msg.match(/^\[紀錄\] 狀態 → (\S+)/);
+    if (s) {
+      add(cur, e.t - since);
+      cur = s[1]; since = e.t;
+      if (cur === lib.STATUS.IMPLEMENTING && lastMark === null) lastMark = e.t;
+      continue;
+    }
+    // shortcut: 平行派工同一批的步驟會算成「距上一步完成」，不是各自的實際耗時；要精確得讓 implementer 回報起訖時間
+    const st = e.msg.match(/^\[完成\] 步驟 (\d+)/);
+    if (st && lastMark !== null) { steps.push([st[1], e.t - lastMark]); lastMark = e.t; }
+    const r = e.msg.match(/^\[審查 (\S+) @/);
+    if (r) rounds[r[1]] = (rounds[r[1]] || 0) + 1;
+  }
+  const end = events[events.length - 1].t;
+  if (!lib.CLOSED_STATUSES.includes(cur)) add(cur, end - since);
+  const total = end - events[0].t;
+  let wait = 0;
+  for (const [k, v] of stages) if (WAIT_STATUSES.includes(k)) wait += v;
+  stages.delete(lib.STATUS.DONE); stages.delete(lib.STATUS.ABORTED);
+  return { total, wait, stages, steps, rounds };
+}
+
+function printTiming(name, t) {
+  const stages = [...t.stages].map(([k, v]) => `${k} ${fmtDur(v)}${WAIT_STATUSES.includes(k) ? '*' : ''}`).join(' | ');
+  process.stdout.write(`${name}：總 ${fmtDur(t.total)}（agent ${fmtDur(t.total - t.wait)}、等使用者 ${fmtDur(t.wait)}）\n`);
+  process.stdout.write(`  階段：${stages || '無'}（* 是等使用者）\n`);
+  if (t.steps.length) process.stdout.write(`  步驟：${t.steps.map(([n, v]) => `${n} ${fmtDur(v)}`).join(' | ')}\n`);
+  const r = Object.entries(t.rounds);
+  if (r.length) process.stdout.write(`  審查輪數：${r.map(([k, v]) => `${k} ${v}`).join(' | ')}\n`);
+}
+
+function listTaskFiles(dir) {
+  const out = [];
+  const walk = (d) => {
+    if (!fs.existsSync(d)) return;
+    for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, f.name);
+      if (f.isDirectory()) walk(p); else if (f.name.endsWith('.md')) out.push(p);
+    }
+  };
+  walk(path.join(dir, 'tasks'));
+  walk(path.join(dir, 'archive'));
+  return out.sort();
+}
+
+function timingCmd(root, all) {
+  if (!all) {
+    const task = lib.readActiveTask(root);
+    if (!task) die(`沒有任務（${lib.WF_DIR}/ACTIVE 不存在或指向的檔案不存在）；看所有任務用 --timing --all`);
+    const t = timingOf(task.text);
+    if (!t) die(`${task.name} 沒有帶時間戳的紀錄行`);
+    printTiming(task.name, t);
+    return;
+  }
+  const sum = new Map();
+  let n = 0, total = 0, wait = 0;
+  for (const f of listTaskFiles(lib.wfDir(root))) {
+    const text = fs.readFileSync(f, 'utf8');
+    if (!text.includes(LOG_HEADING)) continue; // 不是任務檔（例如 archive 裡的其他文件）
+    const t = timingOf(text);
+    if (!t) continue;
+    printTiming(lib.normalize(path.relative(lib.wfDir(root), f)), t);
+    n++; total += t.total; wait += t.wait;
+    for (const [k, v] of t.stages) sum.set(k, (sum.get(k) || 0) + v);
+  }
+  if (!n) { process.stdout.write('沒有帶時間戳的任務檔\n'); return; }
+  const ranked = [...sum].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${fmtDur(v)}（${Math.round((v / total) * 100)}%）`).join(' | ');
+  process.stdout.write(`\n合計 ${n} 個任務：總 ${fmtDur(total)}（agent ${fmtDur(total - wait)}、等使用者 ${fmtDur(wait)}）\n  各階段由多到少：${ranked}\n`);
+}
+
 // plugin 內可以用 --ref 印出的檔案：skills/go/references/*.md（名稱＝檔名去掉 .md）與 skills/<名稱>/SKILL.md。
 // 只認這張表裡的名稱，不拿使用者給的字串去組路徑。
 function refTable() {
@@ -388,6 +487,7 @@ function main() {
 
   if (args.newPlan) { newDoc(root, args.newPlan, 'plans', '計畫檔', '計畫', ['- 狀態：草稿'], PLAN_SECTIONS); return; }
   if (args.newReport) { newDoc(root, args.newReport, 'reports', '報告', '報告', [`- 基準 SHA：${headSha(root)}`], REPORT_SECTIONS); return; }
+  if (args.timing) { timingCmd(root, args.all); return; }
   if (args.config) { configCmd(root, args.lines); return; }
   if (args.lessons) { printLessons(root); return; }
   if (args.lesson) { appendLesson(root, args.lesson); return; }

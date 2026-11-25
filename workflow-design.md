@@ -9,7 +9,7 @@
 
 | 本文寫的 | v0.2 實際 |
 |---|---|
-| 指令 `/doit …` 加子指令 | 獨立指令：`/doit:go`、`/doit:resume`、`/doit:status`、`/doit:abort`、`/doit:init`；另有設計稿沒有的 `/doit:ask`（唯讀回答）、`/doit:explain`（唯讀分析一個檔案或功能，寫成 `.doit/reports/` 下的報告）、`/doit:plan`（把大需求拆成多個任務）與 `/doit:qa`（診斷 QA 回報的問題）；`new`、`auto`、`retro` 尚未實作 |
+| 指令 `/doit …` 加子指令 | 獨立指令：`/doit:go`、`/doit:resume`、`/doit:status`、`/doit:abort`、`/doit:init`；另有設計稿沒有的 `/doit:ask`（唯讀回答）、`/doit:explain`（唯讀分析一個檔案或功能，寫成 `.doit/reports/` 下的報告）、`/doit:plan`（把大需求拆成多個任務）與 `/doit:qa`（診斷 QA 回報的問題）；`/doit:retro` 做成跨任務檢討（最近 N 個任務的錯誤、耗時、審查輪數找模式），也可指定單一任務；`new`、`auto` 尚未實作 |
 | 計畫只有單一任務的計畫 | 多了計畫檔（`.doit/plans/`）：一份計畫含多個任務，各自用 `/doit:go` 執行並回寫狀態 |
 | 審查意見 blocker／major 必須修 | blocker 必須修；major 預設要修，不採納要寫理由並列進回報（`review.md`「意見分級怎麼處理」） |
 | 低風險批准可免 | 一律必須批准；免批准要等 v0.3 無人看管模式 |
@@ -19,6 +19,7 @@
 | 迭代上限 hook、任務檔「迭代」欄 | 尚未實作（v0.3） |
 | Stop hook 檢查「下一步」為空或與狀態不符 | 只檢查為空；改狀態沒同時寫下一步時 log.js 會清空它（v0.2.10），用清空取代比對；只在這個 session 動過任務時才擋 |
 | `[錯誤]` 分類：需求／實作／工具 | 多了 環境、流程 |
+| （設計稿沒有） | v0.2.14 起紀錄行時間戳到秒；`log.js --timing [--all]` 從時間戳算各階段耗時（agent 與等使用者分開）、每步耗時、審查輪數，`/doit:status` 顯示 |
 | references 有 `unattended.md` | 沒有；多了 `ui-verify.md` |
 | Greenfield 模式與慣例檔 | 尚未實作（v0.4） |
 | 一律 commit；有 CI 才開 PR | 由 `/doit:init` 設定：`commit` 預設開、`pr` 預設關，存在 `.doit/config.json` |

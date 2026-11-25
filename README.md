@@ -19,7 +19,7 @@ doit/
   .claude-plugin/plugin.json
   skills/go/SKILL.md              主流程（/doit:go）
   skills/go/references/           tiering / plan-format / implement / review / ui-verify / retro
-  skills/ask|explain|plan|qa|init|resume|status|abort/  其他指令（/doit:ask、/doit:explain、/doit:plan、/doit:qa、/doit:init、/doit:resume、/doit:status、/doit:abort）
+  skills/ask|explain|plan|qa|retro|init|resume|status|abort/  其他指令（/doit:ask、/doit:explain、/doit:plan、/doit:retro、/doit:qa、/doit:init、/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                五個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
@@ -68,8 +68,9 @@ claude --plugin-dir <clone 路徑>/doit
 | `/doit:explain <檔案或功能>` | 唯讀分析一個檔案、模組或功能怎麼實作，寫成 `.doit/reports/` 下的報告（職責、對外介面、誰在用、流程、依賴、邊界與風險、測試）；不改檔、不建任務 |
 | `/doit:plan <需求>` | 把大需求拆成數個任務，寫成 `.doit/plans/` 下的計畫檔，每個任務附可直接貼的 `/doit:go` 指令；只規劃不實作 |
 | `/doit:qa <QA 回報>` | 診斷 QA 實測回報的問題：定位、實際重現、根因、修法與驗證方法，附可直接貼的 `/doit:go` 指令；只診斷不修改 |
+| `/doit:retro [N\|任務檔]` | 跨任務檢討：讀最近 N 個任務（預設 10）的錯誤、耗時與審查輪數，找重複的錯誤、沒生效的教訓與最慢的階段，同意後才寫教訓檔；給任務檔則補做單一任務檢討 |
 | `/doit:resume` | 接續未完成任務 |
-| `/doit:status` | 看狀態 |
+| `/doit:status` | 看狀態（含各階段耗時；問「哪個階段最慢」會彙整所有任務） |
 | `/doit:abort [原因]` | 中止（會先確認） |
 | `/doit:init [commit=on\|off] [pr=on\|off] [implementer=medium\|high] [implementer_model=…]` | 專案設定：完成後要不要 commit（預設開）、開 PR（預設關）、從哪一級開始派 implementer 實作（預設中風險）、implementer 用的模型（預設跟主 session 相同） |
 

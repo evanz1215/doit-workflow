@@ -20,8 +20,9 @@
 /doit:explain <目標>  唯讀分析一個檔案或功能怎麼實作，寫成 .doit/reports/ 下的報告
 /doit:plan <需求>     把大需求拆成數個任務，寫成計畫檔；只規劃不實作
 /doit:qa <QA 回報>    診斷 QA 回報的問題：定位、重現、根因、修法與驗證方法；只診斷不修改
+/doit:retro [N|任務檔]  跨任務檢討（預設最近 10 個），提出教訓或流程調整，同意後才寫入
 /doit:resume         接續未完成任務
-/doit:status         看狀態
+/doit:status         看狀態與各階段耗時
 /doit:abort [原因]   中止（會先確認）
 /doit:init           設定：commit=on|off（預設 on）、pr=on|off（預設 off）、
                      implementer=medium|high（預設 medium）、implementer_model=inherit|fable|opus|sonnet|haiku（預設 inherit）
