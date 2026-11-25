@@ -240,6 +240,10 @@ const explainText = fs.readFileSync(path.join(PLUGIN, 'skills', 'explain', 'SKIL
 check('explain 只讀、用 --new-report 建檔、不建任務', /只讀不改/.test(explainText) && /--new-report/.test(explainText) && /不建立 doit 任務/.test(explainText) && /disable-model-invocation: true/.test(explainText));
 const retroText = fs.readFileSync(path.join(PLUGIN, 'skills', 'retro', 'SKILL.md'), 'utf8');
 check('retro 跨任務：用 --timing --all 與 --lessons、教訓先問再寫、可指定單一任務', /--timing --all/.test(retroText) && /--lessons/.test(retroText) && /教訓檔先問再寫/.test(retroText) && /references\/retro\.md/.test(retroText) && /disable-model-invocation: true/.test(retroText));
+const statusText = fs.readFileSync(path.join(PLUGIN, 'skills', 'status', 'SKILL.md'), 'utf8');
+check('status 列出未完成計畫檔的任務進度與下一個可做的任務，沒有進行中任務時也列', /計畫檔進度/.test(statusText) && /下一個可做/.test(statusText) && /跳到第 5 步/.test(statusText));
+check('單一任務檢討也看 --timing 的耗時與審查輪數', /--timing/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'retro.md'), 'utf8')));
+check('go 階段 0 讀 /doit:explain 的報告並檢查基準 SHA 後的變更', /指令提到分析報告/.test(skillText) && /基準 SHA/.test(skillText));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
 check('plan 規定只規劃不實作、用 --new-plan 建檔、指令帶計畫檔路徑', /不改專案檔案/.test(planText) && /不建立 doit 任務/.test(planText) && /--new-plan/.test(planText) && /\/doit:go 依 \.doit\/plans\//.test(planText));
 check('plan 的回報分一行回報與卡片，卡片有 N／7 進度列', /\*\*一行回報\*\*/.test(planText) && /\*\*卡片\*\*/.test(planText) && /進度 \{已完成的階段數\}／7 · 下一站/.test(planText) && !/進度清單/.test(planText));
