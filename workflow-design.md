@@ -180,7 +180,7 @@ Greenfield 專案做完第一個任務後，後續任務自然落回 brownfield 
 - **中風險**：`doit:reviewer` 看 `起始SHA..HEAD` 的 diff，輸入只有需求原文、計畫、驗收標準、diff。輸出分 blocker / major / minor。
 - **高風險**：先 `doit:verifier` 實際跑程式與測試對照驗收標準，並嘗試邊界輸入；再 `doit:reviewer`。
 - 審查都在**背景 subagent**跑，任務狀態設「待審查」。
-- blocker / major 必須修；minor 可修可記。修完後只重審有改的部分，最多兩輪，之後停下交使用者。
+- blocker 必須修、major 預設要修；minor 預設記下、列進交付回報，要修的跟 blocker／major 同一批修。只有修了 blocker 或 major 而且動到測試以外的檔案才重審（reviewer 只重審改過的部分），其餘由主流程重跑驗證記證據。最多兩輪，之後停下交使用者。
 - 審查者檢查項目固定包含：有沒有碰到計畫沒提的檔案、有沒有偷做範圍外、有沒有「標完成但沒做」的步驟。
 
 ### 階段 8：完成

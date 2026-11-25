@@ -137,8 +137,8 @@ verifier 或 reviewer 的意見決定要修時，**同樣派一個新的 impleme
 - **不做 wip commit**：審查後的修正留在工作目錄，等完成門檻通過後進交付 commit（`commit=off` 時本來就不 commit）。
 - **幾條意見改同一批檔案**可以併成一次派工，prompt 裡逐條列；互不相干的分開派，一次一個。
 - **失敗計數另起**：同一條意見派了 3 次仍核對不過就停，`--set 狀態=待使用者 --set "下一步=使用者決定如何處理審查意見"`。
-- **minor** 決定要修時也走這條路；不值得為它派一次就記下不修並寫理由，列在交付回報。
-- 修完依 `review.md` 的規則重審：verifier 的意見而且動到測試以外的程式碼就重送 verifier，reviewer 的意見就重送 reviewer 只看改過的部分。
+- **minor** 預設記下，列在交付回報；要修的跟同一批 blocker／major 併進同一次派工，不單獨為 minor 派。
+- 修完依 `review.md`「重審條件」：修了 blocker／major 且動到測試以外的檔案才重送（verifier 的意見重送 verifier，reviewer 的意見用重審模板重送 reviewer），否則主流程重跑驗證記 `[證據 標準N]`。
 
 實作時沒有派 implementer 的任務（低風險；`implementer=high` 時的中風險），審查修正由主流程自己改。
 

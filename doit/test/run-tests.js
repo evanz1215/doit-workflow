@@ -309,6 +309,10 @@ const reMode = (reviewerText.split(/^## 重審模式$/m)[1] || '').split(/^## /m
 check('reviewer 有重審模式：只查上一輪意見與新 blocker／major，新 minor 不觸發下一輪，輸出有上一輪意見行', reMode.includes('逐條確認「上一輪要修的意見」是否真的修掉') && reMode.includes('有沒有引入新的 blocker 或 major') && reMode.includes('（重審，不觸發下一輪）') && /^上一輪意見：.*已修掉／未修掉/m.test(reviewerText));
 const minorRow = (reviewText.match(/^\| minor \|.*$/m) || [''])[0];
 check('分級表 minor 列：verifier／reviewer 預設記下列進交付回報、與 blocker／major 同一批修、plan-critic 照舊', minorRow.includes('verifier／reviewer 的 minor **預設記下**') && minorRow.includes('列進交付回報') && minorRow.includes('跟要修的 blocker／major 同一批修，不單獨為 minor 開一輪') && minorRow.includes('重審（第 2 輪起）回來的 minor 一律記下') && minorRow.includes('plan-critic 的 minor 照舊可直接改進計畫') && !/minor 可修可記/.test(reviewText));
+check('SKILL.md 交付回報逐條列出未修的 minor', /\*\*交付回報\*\*（階段 8）：.*記下未修的 minor 審查意見逐條一行/.test(skillText));
+const designText = fs.readFileSync(path.join(PLUGIN, '..', 'workflow-design.md'), 'utf8');
+const stage7 = (skillText.split(/^## 階段 7：審查$/m)[1] || '').split(/^## /m)[0];
+check('SKILL.md、implement.md、workflow-design.md 沒有未分級的舊重審說法，階段 7 與 implement.md 指向「重審條件」', [skillText, implRef, designText].every((t) => !['minor 可修可記', '修完只重審改過的部分', '只重審有改的部分', 'reviewer 的意見就重送 reviewer 只看改過的部分'].some((s) => t.includes(s))) && stage7.includes('`references/review.md`「重審條件」') && fixSec.includes('`review.md`「重審條件」'));
 
 console.log('\n[4f] analyze-log.js 統計審查獨立性');
 const fakeLog = path.join(os.tmpdir(), `doit-analyze-${process.pid}.jsonl`);
