@@ -244,6 +244,7 @@ check('plan 的回報分一行回報與卡片，卡片有 N／7 進度列', /\*\
 check('go 認得計畫檔：階段 0 讀它、完成時更新任務狀態', /指令提到計畫檔/.test(skillText) && /任務來自計畫檔時/.test(skillText));
 const planFmt = fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'plan-format.md'), 'utf8');
 check('計畫格式有「需要你決定」與假設查證狀態', /### 需要你決定/.test(planFmt) && /已查證：/.test(planFmt) && /未查證：/.test(planFmt));
+check('行為類驗收標準要寫代表性輸入與預期值，plan-critic 會檢查', /行為類的標準要寫出代表性輸入與預期值/.test(planFmt) && /代表性輸入與預期值/.test(fs.readFileSync(path.join(PLUGIN, 'agents', 'plan-critic.md'), 'utf8')));
 check('plan-critic 會查證假設', /\*\*假設查證\*\*/.test(fs.readFileSync(path.join(PLUGIN, 'agents', 'plan-critic.md'), 'utf8')));
 check('init 沒參數時用 AskUserQuestion 讓使用者點選', /AskUserQuestion/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'init', 'SKILL.md'), 'utf8')));
 check('resume 指向 go 的主流程', fs.readFileSync(path.join(PLUGIN, 'skills', 'resume', 'SKILL.md'), 'utf8').includes('skills/go/SKILL.md'));
