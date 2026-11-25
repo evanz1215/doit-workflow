@@ -9,7 +9,7 @@
 
 | 本文寫的 | v0.2 實際 |
 |---|---|
-| 指令 `/doit …` 加子指令 | 獨立指令：`/doit:go`、`/doit:resume`、`/doit:status`、`/doit:abort`、`/doit:init`；另有設計稿沒有的 `/doit:ask`（唯讀回答）、`/doit:plan`（把大需求拆成多個任務）與 `/doit:qa`（診斷 QA 回報的問題）；`new`、`auto`、`retro` 尚未實作 |
+| 指令 `/doit …` 加子指令 | 獨立指令：`/doit:go`、`/doit:resume`、`/doit:status`、`/doit:abort`、`/doit:init`；另有設計稿沒有的 `/doit:ask`（唯讀回答）、`/doit:explain`（唯讀分析一個檔案或功能，寫成 `.doit/reports/` 下的報告）、`/doit:plan`（把大需求拆成多個任務）與 `/doit:qa`（診斷 QA 回報的問題）；`new`、`auto`、`retro` 尚未實作 |
 | 計畫只有單一任務的計畫 | 多了計畫檔（`.doit/plans/`）：一份計畫含多個任務，各自用 `/doit:go` 執行並回寫狀態 |
 | 審查意見 blocker／major 必須修 | blocker 必須修；major 預設要修，不採納要寫理由並列進回報（`review.md`「意見分級怎麼處理」） |
 | 低風險批准可免 | 一律必須批准；免批准要等 v0.3 無人看管模式 |

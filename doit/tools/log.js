@@ -19,6 +19,7 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --lesson project|global < 內容            把一條教訓（stdin，markdown）追加到專案或全域教訓檔
   node log.js --lesson-bump project|global <編號> [--hit]  既有教訓再犯：犯錯次數 +1（--hit 則遇到次數 +1），「最近」改成今天
   node log.js --new-plan <slug>                        建立 .doit/plans/<日期>-<slug>.md 骨架並印出路徑（給 /doit:plan 用；不動 ACTIVE）
+  node log.js --new-report <slug>                      建立 .doit/reports/<日期>-<slug>.md 骨架並印出路徑（給 /doit:explain 用；不動 ACTIVE）
   node log.js --config                                 印出目前設定（沒有設定檔時是預設值）
   node log.js --config <鍵>=<值> ...                    修改設定，寫進 .doit/config.json（鍵與值見下方「設定」）
   node log.js --ref [名稱]                              印出 plugin 內的參考檔或 skill 全文（Read 被權限擋下時用）；不給名稱就列出可用名稱
@@ -140,6 +141,9 @@ function parseArgs(argv) {
     } else if (a === '--new-plan') {
       out.newPlan = argv[++i];
       if (!out.newPlan) die('--new-plan 需要 slug');
+    } else if (a === '--new-report') {
+      out.newReport = argv[++i];
+      if (!out.newReport) die('--new-report 需要 slug');
     } else if (a === '--config') {
       out.config = true;
     } else if (a === '--ref') {
@@ -176,6 +180,11 @@ function ensureExcluded(root) {
   } catch {
     // 不是 git repo 或 git 不可用：由 skill 的階段 0 另行處理
   }
+}
+
+// 報告記下寫的當下是哪個 commit，之後讀的人才知道內容可能過時
+function headSha(root) {
+  try { return execSync('git rev-parse --short HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { return '（無）'; }
 }
 
 function today() {
@@ -324,18 +333,20 @@ function configCmd(root, pairs) {
   process.stdout.write(`檔案: ${lib.normalize(path.relative(root, p))}${fs.existsSync(p) ? '' : '（不存在，使用預設值）'}\n`);
 }
 
-// 計畫檔是 /doit:plan 的產出：把大需求拆成多個 /doit:go 任務。它不是任務檔，不動 ACTIVE，hooks 也不管它。
-function newPlan(root, rawSlug) {
+// 計畫檔是 /doit:plan 的產出、報告是 /doit:explain 的產出。都不是任務檔，不動 ACTIVE，hooks 也不管它們。
+function newDoc(root, rawSlug, subdir, kind, title, headLines, sections) {
   const slug = rawSlug.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
-  const p = path.join(lib.wfDir(root), 'plans', `${today()}-${slug}.md`);
-  if (fs.existsSync(p)) die(`計畫檔已存在：${lib.normalize(path.relative(root, p))}（要修改就直接編輯它，或換一個 slug）`);
+  const p = path.join(lib.wfDir(root), subdir, `${today()}-${slug}.md`);
+  if (fs.existsSync(p)) die(`${kind}已存在：${lib.normalize(path.relative(root, p))}（要修改就直接編輯它，或換一個 slug）`);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   ensureExcluded(root);
-  const sections = ['需求原文', '現況', '做法', '需要你決定', '假設', '任務清單', '範圍外', '風險與未知', '變更紀錄'];
-  const body = [`# 計畫：${slug}`, '', `- 建立：${lib.nowStamp()}`, '- 狀態：草稿', ...sections.flatMap((s) => ['', `## ${s}`])];
+  const body = [`# ${title}：${slug}`, '', `- 建立：${lib.nowStamp()}`, ...headLines, ...sections.flatMap((s) => ['', `## ${s}`])];
   fs.writeFileSync(p, body.join('\n') + '\n');
   process.stdout.write(`已建立 ${lib.normalize(path.relative(root, p))}\n`);
 }
+
+const PLAN_SECTIONS = ['需求原文', '現況', '做法', '需要你決定', '假設', '任務清單', '範圍外', '風險與未知', '變更紀錄'];
+const REPORT_SECTIONS = ['分析目標', '結論', '職責', '對外介面', '誰在用', '運作流程', '依賴', '邊界與風險', '測試', '依據', '不確定的地方'];
 
 // plugin 內可以用 --ref 印出的檔案：skills/go/references/*.md（名稱＝檔名去掉 .md）與 skills/<名稱>/SKILL.md。
 // 只認這張表裡的名稱，不拿使用者給的字串去組路徑。
@@ -375,7 +386,8 @@ function main() {
   if (!root) die(`找不到專案根目錄（沒有 .git 也沒有 ${lib.WF_DIR}/ACTIVE）`);
   const dir = lib.wfDir(root);
 
-  if (args.newPlan) { newPlan(root, args.newPlan); return; }
+  if (args.newPlan) { newDoc(root, args.newPlan, 'plans', '計畫檔', '計畫', ['- 狀態：草稿'], PLAN_SECTIONS); return; }
+  if (args.newReport) { newDoc(root, args.newReport, 'reports', '報告', '報告', [`- 基準 SHA：${headSha(root)}`], REPORT_SECTIONS); return; }
   if (args.config) { configCmd(root, args.lines); return; }
   if (args.lessons) { printLessons(root); return; }
   if (args.lesson) { appendLesson(root, args.lesson); return; }

@@ -19,7 +19,7 @@ doit/
   .claude-plugin/plugin.json
   skills/go/SKILL.md              主流程（/doit:go）
   skills/go/references/           tiering / plan-format / implement / review / ui-verify / retro
-  skills/ask|plan|qa|init|resume|status|abort/  其他指令（/doit:ask、/doit:plan、/doit:qa、/doit:init、/doit:resume、/doit:status、/doit:abort）
+  skills/ask|explain|plan|qa|init|resume|status|abort/  其他指令（/doit:ask、/doit:explain、/doit:plan、/doit:qa、/doit:init、/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                五個 hook 的註冊
   hooks/guard-edit.js             未批准不得改專案檔
@@ -65,6 +65,7 @@ claude --plugin-dir <clone 路徑>/doit
 |---|---|
 | `/doit:go <開發指令>` | 新任務 |
 | `/doit:ask <問題>` | 唯讀回答專案相關問題，附來源；不改檔、不建任務 |
+| `/doit:explain <檔案或功能>` | 唯讀分析一個檔案、模組或功能怎麼實作，寫成 `.doit/reports/` 下的報告（職責、對外介面、誰在用、流程、依賴、邊界與風險、測試）；不改檔、不建任務 |
 | `/doit:plan <需求>` | 把大需求拆成數個任務，寫成 `.doit/plans/` 下的計畫檔，每個任務附可直接貼的 `/doit:go` 指令；只規劃不實作 |
 | `/doit:qa <QA 回報>` | 診斷 QA 實測回報的問題：定位、實際重現、根因、修法與驗證方法，附可直接貼的 `/doit:go` 指令；只診斷不修改 |
 | `/doit:resume` | 接續未完成任務 |

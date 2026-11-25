@@ -122,6 +122,12 @@ check('--new-plan 建立計畫檔骨架', np.code === 0 && planFiles.length === 
 check('--new-plan 不動 ACTIVE，計畫檔被 git 排除', fs.readFileSync(path.join(tmp, STATE, 'ACTIVE'), 'utf8') === activeBefore && git(['status', '--porcelain'], tmp).stdout.trim() === '');
 check('--new-plan 重複會失敗', runLog(['--new-plan', 'Big Feature'], tmp).code !== 0);
 check('--new-plan 沒給 slug 被拒', runLog(['--new-plan'], tmp).code !== 0);
+const nr = runLog(['--new-report', 'Breakpoints Store'], tmp);
+const reportFiles = fs.existsSync(path.join(tmp, STATE, 'reports')) ? fs.readdirSync(path.join(tmp, STATE, 'reports')) : [];
+const reportText = reportFiles.length ? fs.readFileSync(path.join(tmp, STATE, 'reports', reportFiles[0]), 'utf8') : '';
+check('--new-report 建立報告骨架並記基準 SHA', nr.code === 0 && reportFiles.length === 1 && /-breakpoints-store\.md$/.test(reportFiles[0]) && /## 誰在用/.test(reportText) && /## 不確定的地方/.test(reportText) && /- 基準 SHA：[0-9a-f]{7,}/.test(reportText), nr.err);
+check('--new-report 不動 ACTIVE，報告被 git 排除', fs.readFileSync(path.join(tmp, STATE, 'ACTIVE'), 'utf8') === activeBefore && git(['status', '--porcelain'], tmp).stdout.trim() === '');
+check('--new-report 重複會失敗、沒給 slug 被拒', runLog(['--new-report', 'Breakpoints Store'], tmp).code !== 0 && runLog(['--new-report'], tmp).code !== 0);
 check('任務檔以「## 紀錄」結尾且有建立行', /## 紀錄\n\[[\d\- :]+\] \[紀錄\] 任務建立\n$/.test(taskText()), JSON.stringify(taskText().slice(-80)));
 
 console.log('\n[3] 探索中：擋改檔、擋 commit、擋 stop（下一步空）');
@@ -230,6 +236,8 @@ check('ask 固定欄位只有依據與不確定的地方，其餘適用時才出
 const qaText = fs.readFileSync(path.join(PLUGIN, 'skills', 'qa', 'SKILL.md'), 'utf8');
 check('qa 規定只診斷不修改、不建任務、重現三種結果、交接 /doit:go', /不改專案檔案/.test(qaText) && /不建立 doit 任務/.test(qaText) && ['已重現', '未重現', '無法實跑'].every((s) => qaText.includes(`**${s}**`)) && /### 🐞 doit:qa/.test(qaText) && /`\/doit:go 修正 /.test(qaText));
 check('qa 的驗證方法有回歸測試、QA 重測步驟、周邊回歸', ['回歸測試', 'QA 重測步驟', '周邊回歸'].every((s) => qaText.includes(`**${s}**`)));
+const explainText = fs.readFileSync(path.join(PLUGIN, 'skills', 'explain', 'SKILL.md'), 'utf8');
+check('explain 只讀、用 --new-report 建檔、不建任務', /只讀不改/.test(explainText) && /--new-report/.test(explainText) && /不建立 doit 任務/.test(explainText) && /disable-model-invocation: true/.test(explainText));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
 check('plan 規定只規劃不實作、用 --new-plan 建檔、指令帶計畫檔路徑', /不改專案檔案/.test(planText) && /不建立 doit 任務/.test(planText) && /--new-plan/.test(planText) && /\/doit:go 依 \.doit\/plans\//.test(planText));
 check('plan 的回報分一行回報與卡片，卡片有 N／7 進度列', /\*\*一行回報\*\*/.test(planText) && /\*\*卡片\*\*/.test(planText) && /進度 \{已完成的階段數\}／7 · 下一站/.test(planText) && !/進度清單/.test(planText));
