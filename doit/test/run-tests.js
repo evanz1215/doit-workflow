@@ -300,6 +300,16 @@ check('implement.md 有「審查後的修正」一節：派新的 implementer、
 check('SKILL.md 與 review.md 都指向「審查後的修正」', /實作時派 implementer 的任務，審查修正也派新的 implementer/.test(skillText) && /`implement\.md`「審查後的修正」/.test(reviewText));
 check('implement.md 的每步回報改用階段回報格式', !/用 3 行/.test(implRef) && /依 SKILL\.md「階段回報」的格式回報這一步/.test(implRef));
 
+console.log('\n[4e2] 重審條件、重審模板、minor 預設記下');
+check('review.md 重審條件：修了 blocker／major 且動到測試以外才重審，否則主流程重跑驗證記證據', reviewText.includes('只有修了 blocker 或 major，而且修正動到測試以外的檔案，才重送審查者') && reviewText.includes('只修 minor、或修正只動測試檔時，不重派審查者，由主流程重跑受影響步驟的驗證並記 `[證據 標準N]`'));
+const reReviewTpl = (reviewText.split(/^## 重審$/m)[1] || '').split('```')[0];
+check('review.md 有重審 reviewer 模板：上一輪意見原文、上次審查 sha 之後的 diff、不附處理說明', reReviewTpl.includes('### 上一輪要修的意見') && reReviewTpl.includes('只看自上次審查後的 diff：git -C <專案路徑> diff <上次審查 sha>') && reviewText.includes('**不附你的處理說明、不附上一輪的結論與其他意見。**'));
+const reviewerText = fs.readFileSync(path.join(PLUGIN, 'agents', 'reviewer.md'), 'utf8');
+const reMode = (reviewerText.split(/^## 重審模式$/m)[1] || '').split(/^## /m)[0];
+check('reviewer 有重審模式：只查上一輪意見與新 blocker／major，新 minor 不觸發下一輪，輸出有上一輪意見行', reMode.includes('逐條確認「上一輪要修的意見」是否真的修掉') && reMode.includes('有沒有引入新的 blocker 或 major') && reMode.includes('（重審，不觸發下一輪）') && /^上一輪意見：.*已修掉／未修掉/m.test(reviewerText));
+const minorRow = (reviewText.match(/^\| minor \|.*$/m) || [''])[0];
+check('分級表 minor 列：verifier／reviewer 預設記下列進交付回報、與 blocker／major 同一批修、plan-critic 照舊', minorRow.includes('verifier／reviewer 的 minor **預設記下**') && minorRow.includes('列進交付回報') && minorRow.includes('跟要修的 blocker／major 同一批修，不單獨為 minor 開一輪') && minorRow.includes('重審（第 2 輪起）回來的 minor 一律記下') && minorRow.includes('plan-critic 的 minor 照舊可直接改進計畫') && !/minor 可修可記/.test(reviewText));
+
 console.log('\n[4f] analyze-log.js 統計審查獨立性');
 const fakeLog = path.join(os.tmpdir(), `doit-analyze-${process.pid}.jsonl`);
 const asst = (content, parent) => JSON.stringify({ type: 'assistant', session_id: 's1', parent_tool_use_id: parent || null, message: { content } });
