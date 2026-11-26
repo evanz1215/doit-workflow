@@ -271,6 +271,8 @@ const implResume = (implRef.split(/^## 接續/m)[1] || '').split(/^## /m)[0];
 check('implement.md 有「平行派工」一節：同一則訊息派、依編號核對、合併驗證、只 add 該步檔案、單獨重派、接續；不再寫「不平行」', /^## 平行派工$/m.test(implRef) && ['**同一則訊息**', '依步驟編號逐一', '平行批次合併驗證', '只 `git add` 這一步清單內的檔案', '**單獨**重派'].every((s) => implRef.includes(s)) && implResume.includes('中斷在平行批次中') && !implRef.includes('不平行'));
 check('SKILL.md 階段 3、5 寫明依賴欄與平行例外，plan-critic 檢查依賴欄', !skillText.includes('一次只派一個') && skillText.includes('平行派工的同批步驟由 implementer 同時做第 1、2 拍') && skillText.includes('每步填「依賴」欄') && fs.readFileSync(path.join(PLUGIN, 'agents', 'plan-critic.md'), 'utf8').includes('「**依賴**」欄有沒有漏寫'));
 check('implementer 平行時不碰別步檔案，清單外原因回報受阻', implText.includes('同批其他步驟的檔案會在你工作時被修改') && implText.includes('回報「受阻」並寫明是哪個檔案'));
+const untrackedReviewer = fs.readFileSync(path.join(PLUGIN, 'agents', 'reviewer.md'), 'utf8');
+check('審查模板與 reviewer／verifier 列出未追蹤新檔', reviewText.split('status --porcelain --untracked-files=all').length - 1 >= 2 && reviewText.includes('### 這次修正動到的未追蹤檔') && untrackedReviewer.includes('untracked-files=all') && untrackedReviewer.includes('在 diff 或未追蹤新檔裡找得到') && untrackedReviewer.includes('這次修正動到的未追蹤檔') && fs.readFileSync(path.join(PLUGIN, 'agents', 'verifier.md'), 'utf8').includes('untracked-files=all') && skillText.includes('列出未追蹤新檔'));
 
 console.log('\n[4c] --ref：Read 被權限擋下時仍讀得到參考檔');
 const refList = runLog(['--ref'], tmp);
