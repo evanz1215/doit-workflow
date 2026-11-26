@@ -266,7 +266,7 @@ Claude Code 會在執行前靜態檢查 Bash 指令，複合指令常被擋下�
 ## 階段 7：審查
 
 - **低風險**：跳過，直接進階段 8。
-- **中風險**：讀 `references/review.md`，呼叫 `doit:reviewer` subagent（前景執行，等它回來），輸入只有：需求原文、計畫 vN 的做法／假設／已定的決定／驗收標準／實作步驟／範圍外、取得 `git diff <起始SHA>` 的指令（含工作目錄變更）、專案路徑與慣例。**不給實作過程、不給你的推理**。
+- **中風險**：讀 `references/review.md`，呼叫 `doit:reviewer` subagent（前景執行，等它回來），輸入只有：需求原文、計畫 vN 的做法／假設／已定的決定／驗收標準／實作步驟／範圍外、取得 `git diff <起始SHA>` 的指令（含工作目錄變更）與列出未追蹤新檔的 `git status --porcelain --untracked-files=all` 指令、專案路徑與慣例。**不給實作過程、不給你的推理**。
 - **高風險**：先 `doit:verifier` 再 `doit:reviewer`，都前景執行。verifier 的輸入只有：需求原文、假設、已定的決定、驗收標準表、基準檢查的指令與結果、取得 diff 的指令、專案路徑、暫存目錄路徑（給它放邊界測試腳本，不得放進專案）。結論「未通過」或有 blocker → 回階段 5 修，修完依 `references/review.md`「重審條件」重送 verifier，只重跑失敗的標準，最多兩輪。結論「通過」但有要修的 major → 修完同樣依「重審條件」重送 verifier，只重跑那條意見的重現輸入與受影響的標準。verifier 過了才呼叫 reviewer，reviewer 的 prompt 可以附上 verifier 的結論一行（不附過程）。
 - **三種審查的 prompt 都把內容貼進去，不給任務檔路徑**：計畫、假設、驗收標準再長也照貼。任務檔的紀錄節有你的處理說明與先前審查的結論，審查者讀到就不獨立。
 - 結果以 `[審查 reviewer @<sha>] 結論：…`／`[審查 verifier @<sha>] 結論：…` 加逐條意見記進任務檔。blocker 必須修（回階段 5 的對應步驟）；major 預設要修，不採納時要寫具體到這個專案的理由，並在交付回報裡逐條列出；minor 預設記下、列進交付回報，要修的跟 blocker／major 同一批修。完整規則見 `references/review.md`「意見分級怎麼處理」。只有修了 blocker 或 major 而且動到測試以外的檔案才重審（reviewer 用 review.md 的重審模板，只重審改過的部分），其餘由主流程重跑驗證記證據，見 `references/review.md`「重審條件」。最多兩輪，之後停下交使用者。
