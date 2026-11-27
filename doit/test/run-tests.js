@@ -242,6 +242,9 @@ const retroText = fs.readFileSync(path.join(PLUGIN, 'skills', 'retro', 'SKILL.md
 check('retro 跨任務：用 --timing --all 與 --lessons、教訓先問再寫、可指定單一任務', /--timing --all/.test(retroText) && /--lessons/.test(retroText) && /教訓檔先問再寫/.test(retroText) && /references\/retro\.md/.test(retroText) && /disable-model-invocation: true/.test(retroText));
 const statusText = fs.readFileSync(path.join(PLUGIN, 'skills', 'status', 'SKILL.md'), 'utf8');
 check('status 列出未完成計畫檔的任務進度與下一個可做的任務，沒有進行中任務時也列', /計畫檔進度/.test(statusText) && /下一個可做/.test(statusText) && /跳到第 5 步/.test(statusText));
+const archiveLines = [path.join(PLUGIN, '..', 'README.md'), path.join(PLUGIN, 'README.md'), path.join(PLUGIN, 'skills', 'retro', 'SKILL.md'), path.join(PLUGIN, 'skills', 'qa', 'SKILL.md')]
+  .map((f) => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter((l) => l.includes('.doit/archive/')));
+check('四份文件提到 .doit/archive/ 的行都寫明使用者手動搬入、doit 不會自動寫入', archiveLines.every((ls) => ls.length > 0 && ls.every((l) => l.includes('手動') && l.includes('不會自動寫入'))), JSON.stringify(archiveLines));
 check('單一任務檢討也看 --timing 的耗時與審查輪數', /--timing/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'retro.md'), 'utf8')));
 check('go 階段 0 讀 /doit:explain 的報告並檢查基準 SHA 後的變更', /指令提到分析報告/.test(skillText) && /基準 SHA/.test(skillText));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
@@ -584,6 +587,8 @@ check('--timing 每步耗時與審查輪數', /步驟：1 2m15s \| 2 2m45s/.test
 const ta = runLog(['--timing', '--all'], tt);
 check('--timing --all 含 archive、略過非任務檔、彙整排序', ta.code === 0 && /合計 2 個任務：總 40m00s/.test(ta.out) && /各階段由多到少：探索中 12m00s（30%）/.test(ta.out) && !/notes\.md/.test(ta.out), ta.out + ta.err);
 fs.rmSync(path.join(tt, STATE, 'ACTIVE'));
+const timingHelpLine = help.out.split(/\r?\n/).find((l) => l.includes('--timing [--all]')) || '';
+check('--help 的 --timing [--all] 行寫明 archive 是使用者手動搬入、不會自動寫入', /手動搬入/.test(timingHelpLine) && /不會自動寫入/.test(timingHelpLine), timingHelpLine);
 check('--timing 沒有任務時失敗並提示 --all', runLog(['--timing'], tt).code !== 0);
 fs.rmSync(tt, { recursive: true, force: true });
 
