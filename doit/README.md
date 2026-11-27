@@ -28,7 +28,7 @@
                      implementer=medium|high（預設 medium）、implementer_model=inherit|fable|opus|sonnet|haiku（預設 inherit）
 ```
 
-任務狀態放在目標專案的 `.doit/`，由 `tools/log.js` 寫入，不進 git。
+任務狀態放在目標專案的 `.doit/`，由 `tools/log.js` 寫入，不進 git。`.doit/archive/` 是使用者手動搬舊任務檔進去的資料夾，doit 不會自動寫入。
 
 ## 需求
 

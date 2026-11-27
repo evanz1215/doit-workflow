@@ -74,7 +74,7 @@ claude --plugin-dir <clone 路徑>/doit
 | `/doit:abort [原因]` | 中止（會先確認） |
 | `/doit:init [commit=on\|off] [pr=on\|off] [implementer=medium\|high] [implementer_model=…]` | 專案設定：完成後要不要 commit（預設開）、開 PR（預設關）、從哪一級開始派 implementer 實作（預設中風險）、implementer 用的模型（預設跟主 session 相同） |
 
-任務狀態放在目標專案的 `.doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。
+任務狀態放在目標專案的 `.doit/`，不進 git（`log.js --new` 會自動加進 `.git/info/exclude`）。`.doit/archive/` 是使用者手動搬舊任務檔進去的資料夾，doit 不會自動寫入。
 
 ### 測試
 

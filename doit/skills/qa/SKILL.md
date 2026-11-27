@@ -35,7 +35,7 @@ QA 回報：$ARGUMENTS
 
 - `CLAUDE.md`、`AGENTS.md`、`README.md`（有哪個讀哪個），只取相關部分。
 - 教訓（是 git repo 才做）：`node "${CLAUDE_PLUGIN_ROOT}/tools/log.js" --lessons`，看這個坑是不是已經記過。
-- 找這個功能的需求來源：`.doit/tasks/`、`.doit/archive/`、`.doit/plans/` 裡相關任務的「需求原文」與驗收標準、相關 commit 訊息、規格文件。用來判斷「預期結果」是不是當初講好的行為。
+- 找這個功能的需求來源：`.doit/tasks/`、`.doit/archive/`（使用者手動搬入的舊任務，doit 不會自動寫入）、`.doit/plans/` 裡相關任務的「需求原文」與驗收標準、相關 commit 訊息、規格文件。用來判斷「預期結果」是不是當初講好的行為。
 
 ### 3. 定位
 

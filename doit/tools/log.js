@@ -14,7 +14,7 @@ const HELP = `log.js：doit 任務檔寫入工具
   node log.js --new <slug> [--set 欄位=值 ...]        建立任務檔與 ACTIVE（自動把 .doit/ 加進 .git/info/exclude）
   node log.js [--set 欄位=值 ...] "[標籤] 文字" ...     追加紀錄行到「## 紀錄」小節、更新頂端欄位
   node log.js --show                                   印出頂端欄位與檔案路徑
-  node log.js --timing [--all]                         從紀錄行時間戳算各階段耗時、每步耗時、審查輪數；--all 彙整 .doit/tasks 與 archive 下所有任務
+  node log.js --timing [--all]                         從紀錄行時間戳算各階段耗時、每步耗時、審查輪數；--all 彙整 .doit/tasks 與 archive（使用者手動搬入，doit 不會自動寫入）下所有任務
   node log.js --close 完成|中止 ["[標籤] 文字"]         結束任務（狀態改為完成／中止）
   node log.js --lessons                                印出專案與全域教訓檔內容
   node log.js --lesson project|global < 內容            把一條教訓（stdin，markdown）追加到專案或全域教訓檔
