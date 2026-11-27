@@ -143,12 +143,27 @@ const stopBlocked = run(path.join(HOOKS, 'guard-stop.js'), stopEvent(false), tmp
 check('下一步空 → stop 被擋', stopBlocked.json && stopBlocked.json.decision === 'block', stopBlocked.out);
 check('stop_hook_active → 放行（防迴圈）', allowed(run(path.join(HOOKS, 'guard-stop.js'), stopEvent(true), tmp)));
 check('block 訊息含 log.js 完整路徑', /node "[^"]*tools\/log\.js"/.test(stopBlocked.json ? stopBlocked.json.reason : ''), stopBlocked.out);
-const transcriptTouched = path.join(tmp, 'transcript-touched.jsonl');
-const transcriptClean = path.join(tmp, 'transcript-clean.jsonl');
-fs.writeFileSync(transcriptTouched, '{"type":"assistant","text":"node tools/log.js --set x=y"}\n');
-fs.writeFileSync(transcriptClean, '{"type":"assistant","text":"src 目錄下有 3 個檔案"}\n');
-check('對話紀錄有碰 log.js → 仍擋', denied(run(path.join(HOOKS, 'guard-stop.js'), { ...stopEvent(false), transcript_path: transcriptTouched }, tmp)) || (run(path.join(HOOKS, 'guard-stop.js'), { ...stopEvent(false), transcript_path: transcriptTouched }, tmp).json || {}).decision === 'block');
-check('純問答 session（紀錄沒有 log.js）→ 放行', allowed(run(path.join(HOOKS, 'guard-stop.js'), { ...stopEvent(false), transcript_path: transcriptClean }, tmp)));
+// 擬真 jsonl：每行一個物件，工具指令放在 tool_use 的 input.command
+let transcriptN = 0;
+const transcript = (lines) => {
+  const p = path.join(tmp, `transcript-${++transcriptN}.jsonl`);
+  fs.writeFileSync(p, lines.map((l) => JSON.stringify(typeof l === 'string'
+    ? { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: l } }] } }
+    : l)).join('\n') + '\n');
+  return p;
+};
+const textLine = (text) => ({ type: 'assistant', message: { content: [{ type: 'text', text }] } });
+const stopWith = (lines) => run(path.join(HOOKS, 'guard-stop.js'), { ...stopEvent(false), transcript_path: transcript(lines) }, tmp);
+const stopBlockedBy = (lines) => (stopWith(lines).json || {}).decision === 'block';
+const LJ = 'node "C:/x/doit/tools/log.js"';
+check('紀錄有 log.js --set 指令（路徑帶引號）→ 擋', stopBlockedBy([`${LJ} --set "下一步=x"`]));
+check('只有唯讀 log.js 指令（--lessons/--show/--timing/--ref/--new-plan）→ 放行', allowed(stopWith([`${LJ} --lessons`, `${LJ} --show`, `${LJ} --timing`, `${LJ} --ref review`, `${LJ} --new-plan foo`])));
+check('log.js --new slug → 擋', stopBlockedBy([`${LJ} --show`, `${LJ} --new slug`]));
+check('log.js --close 完成 → 擋', stopBlockedBy([`${LJ} --close 完成`]));
+check('log.js 紀錄行參數 "[紀錄] x" → 擋', stopBlockedBy([`${LJ} "[紀錄] x"`]));
+check('只有文字提到 log.js --set（沒有 command 欄位）→ 放行', allowed(stopWith([textLine('node tools/log.js --set x=y')])));
+check('文字內容含跳脫的 "command":"node log.js --set x" → 放行', allowed(stopWith([textLine('"command":"node log.js --set x"')])));
+check('純問答 session（紀錄沒有 log.js）→ 放行', allowed(stopWith([textLine('src 目錄下有 3 個檔案'), 'ls src'])));
 check('transcript_path 指向不存在的檔 → 維持嚴格擋下', (run(path.join(HOOKS, 'guard-stop.js'), { ...stopEvent(false), transcript_path: path.join(tmp, 'nope.jsonl') }, tmp).json || {}).decision === 'block');
 runLog(['--set', '下一步=寫計畫'], tmp);
 check('下一步有值 → stop 放行', allowed(run(path.join(HOOKS, 'guard-stop.js'), stopEvent(false), tmp)));
