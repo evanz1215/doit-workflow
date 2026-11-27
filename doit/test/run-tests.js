@@ -301,6 +301,9 @@ check('審查模板與 reviewer／verifier 列出未追蹤新檔', reviewText.sp
 const abortText = fs.readFileSync(path.join(PLUGIN, 'skills', 'abort', 'SKILL.md'), 'utf8');
 check('abort 同步計畫檔：讀來源行、進行中才改中止並寫變更紀錄、沒有來源行不動', ['來源：<計畫檔路徑> T<N>', '「進行中」：用 Edit 把它改成「中止」', '## 變更紀錄', '不動任何計畫檔'].every((s) => abortText.includes(s)));
 check('status 依賴中止任務標已中止、不算可做；plan 狀態值含中止', statusText.includes('依賴 T4 已中止') && statusText.includes('依賴裡有「中止」任務的不算可做') && planText.includes('待開始／進行中／完成／中止'));
+check('go 階段 8：每列都完成或中止才把計畫頂端改完成，有中止寫計畫結束，不再寫「所有任務都完成時」', skillText.includes('任務清單每一列的狀態都是「完成」或「中止」時，把計畫檔頂端的狀態也改成「完成」') && skillText.includes('計畫結束：T<N>、T<M> 中止') && !skillText.includes('所有任務都完成時'));
+check('go 階段 0：頂端是草稿、已確認或完成都改回進行中', skillText.includes('頂端狀態是「草稿」「已確認」或「完成」的也改成「進行中」'));
+check('abort 收尾計畫頂端並在回報提到頂端；plan 說明完成的頂端會被 go 改回進行中', ['每一列都是「完成」或「中止」', '計畫結束：T<N>、T<M> 中止', '頂端有沒有改成「完成」'].every((s) => abortText.includes(s)) && planText.includes('頂端已是「完成」時，`/doit:go` 開始那個任務時會把頂端改回「進行中」'));
 const commitFail = (skillText.split('**交付 commit 失敗**')[1] || '').split('**`commit=off`**')[0];
 check('階段 8 有交付 commit 失敗：改回待審查、修原因、重查門檻、改回完成再 commit、修不了停在待審查', ['`--set 狀態=待審查 --set "下一步=修交付 commit 失敗：<原因>"`', 'pre-commit 自動改了檔案時，重跑受影響步驟的驗證', '重新檢查完成門檻', '`--set 狀態=完成 --set "下一步=無（已完成）"`，**另一次呼叫**再做交付 commit', '修不了就停在「待審查」'].every((s) => commitFail.includes(s)));
 const planItem = (skillText.split('- **指令提到計畫檔**')[1] || '').split('- **指令提到分析報告**')[0];
