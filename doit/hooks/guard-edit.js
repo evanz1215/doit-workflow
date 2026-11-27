@@ -2,6 +2,7 @@
 'use strict';
 // PreToolUse (Edit|Write|MultiEdit|NotebookEdit)
 // 硬規則 1：任務計畫未批准前，不得修改專案內 .doit/ 以外的檔案。
+// 已批准但分支尚未建立也擋：要先開分支再改檔。
 // 專案目錄之外的檔案（例如 scratchpad）不歸這個 hook 管。
 // 例外：無人看管模式且等級為低（v0.3 才啟用，先保留判斷）。
 
@@ -27,6 +28,13 @@ if (lib.LOCKED_STATUSES.includes(status) && !unattendedLow) {
   lib.denyPreToolUse(
     `[doit] 任務 ${task.name} 狀態為「${status}」，計畫尚未批准，不得修改專案檔案 ${lib.normalize(filePath)}。` +
     `先取得使用者明確批准，並用 log.js --set 狀態=已批准 --set "下一步=開分支並做步驟 1" 更新任務檔。`
+  );
+}
+
+if (status === lib.STATUS.APPROVED && task.fields['分支'] === '尚未建立' && !unattendedLow) {
+  lib.denyPreToolUse(
+    `[doit] 任務 ${task.name} 已批准但還沒開分支，不得修改專案檔案 ${lib.normalize(filePath)}。` +
+    `先開分支（git checkout -b <type>/<name>），再用 log.js 在同一次呼叫 --set 分支=<名稱> --set 狀態=實作中 --set "下一步=做步驟 1" 更新任務檔。`
   );
 }
 
