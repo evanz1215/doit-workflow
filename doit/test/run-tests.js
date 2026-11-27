@@ -330,6 +330,12 @@ check('SKILL.md 交付回報逐條列出未修的 minor', /\*\*交付回報\*\*�
 const designText = fs.readFileSync(path.join(PLUGIN, '..', 'workflow-design.md'), 'utf8');
 const stage7 = (skillText.split(/^## 階段 7：審查$/m)[1] || '').split(/^## /m)[0];
 check('SKILL.md、implement.md、workflow-design.md 沒有未分級的舊重審說法，階段 7 與 implement.md 指向「重審條件」', [skillText, implRef, designText].every((t) => !['minor 可修可記', '修完只重審改過的部分', '只重審有改的部分', 'reviewer 的意見就重送 reviewer 只看改過的部分'].some((s) => t.includes(s))) && stage7.includes('`references/review.md`「重審條件」') && fixSec.includes('`review.md`「重審條件」'));
+const verifierText = fs.readFileSync(path.join(PLUGIN, 'agents', 'verifier.md'), 'utf8');
+const vReMode = (verifierText.split(/^## 重審模式$/m)[1] || '').split(/^## /m)[0];
+check('verifier 有重審模式：只重跑觸發、只跑指定項目、不重跑全部基準、邊界只對修正行為、新 minor 不觸發下一輪，輸出有上一輪意見行', ['只重跑', '沒指定的標準不重跑', '不重跑全部基準檢查', '邊界輸入只對這次修正改到的行為試', '（重審，不觸發下一輪）'].every((s) => vReMode.includes(s)) && /^上一輪意見：.*已修掉／未修掉/m.test(verifierText));
+const pcReMode = (fs.readFileSync(path.join(PLUGIN, 'agents', 'plan-critic.md'), 'utf8').split(/^## 重審模式$/m)[1] || '').split(/^## /m)[0];
+check('plan-critic 有重審模式：這是第二輪觸發、只審修改節與牽動的需求覆蓋和步驟依賴、新 minor 不觸發下一輪', ['這是第二輪', '列出的修改節', '這些修改牽動的需求覆蓋與步驟依賴', '（重審，不觸發下一輪）'].every((s) => pcReMode.includes(s)));
+check('implementer 一次派工最多 2 次驗證，implement.md 計數寫 3 次 × 至多 2 次', implText.includes('一次派工最多跑 2 次驗證') && implText.includes('第 2 次驗證仍不過') && !implText.includes('最多試 3 次') && !implText.includes('試了 3 次') && implRef.includes('主流程累計 3 次 × 每次 implementer 至多 2 次執行'));
 
 console.log('\n[4f] analyze-log.js 統計審查獨立性');
 const fakeLog = path.join(os.tmpdir(), `doit-analyze-${process.pid}.jsonl`);
