@@ -273,6 +273,14 @@ check('SKILL.md 階段 3、5 寫明依賴欄與平行例外，plan-critic 檢查
 check('implementer 平行時不碰別步檔案，清單外原因回報受阻', implText.includes('同批其他步驟的檔案會在你工作時被修改') && implText.includes('回報「受阻」並寫明是哪個檔案'));
 const untrackedReviewer = fs.readFileSync(path.join(PLUGIN, 'agents', 'reviewer.md'), 'utf8');
 check('審查模板與 reviewer／verifier 列出未追蹤新檔', reviewText.split('status --porcelain --untracked-files=all').length - 1 >= 2 && reviewText.includes('### 這次修正動到的未追蹤檔') && untrackedReviewer.includes('untracked-files=all') && untrackedReviewer.includes('在 diff 或未追蹤新檔裡找得到') && untrackedReviewer.includes('這次修正動到的未追蹤檔') && fs.readFileSync(path.join(PLUGIN, 'agents', 'verifier.md'), 'utf8').includes('untracked-files=all') && skillText.includes('列出未追蹤新檔'));
+const abortText = fs.readFileSync(path.join(PLUGIN, 'skills', 'abort', 'SKILL.md'), 'utf8');
+check('abort 同步計畫檔：讀來源行、進行中才改中止並寫變更紀錄、沒有來源行不動', ['來源：<計畫檔路徑> T<N>', '「進行中」：用 Edit 把它改成「中止」', '## 變更紀錄', '不動任何計畫檔'].every((s) => abortText.includes(s)));
+check('status 依賴中止任務標已中止、不算可做；plan 狀態值含中止', statusText.includes('依賴 T4 已中止') && statusText.includes('依賴裡有「中止」任務的不算可做') && planText.includes('待開始／進行中／完成／中止'));
+const commitFail = (skillText.split('**交付 commit 失敗**')[1] || '').split('**`commit=off`**')[0];
+check('階段 8 有交付 commit 失敗：改回待審查、修原因、重查門檻、改回完成再 commit、修不了停在待審查', ['`--set 狀態=待審查 --set "下一步=修交付 commit 失敗：<原因>"`', 'pre-commit 自動改了檔案時，重跑受影響步驟的驗證', '重新檢查完成門檻', '`--set 狀態=完成 --set "下一步=無（已完成）"`，**另一次呼叫**再做交付 commit', '修不了就停在「待審查」'].every((s) => commitFail.includes(s)));
+const planItem = (skillText.split('- **指令提到計畫檔**')[1] || '').split('- **指令提到分析報告**')[0];
+const reportItem = (skillText.split('- **指令提到分析報告**')[1] || '').split('- 建立任務檔')[0];
+check('階段 0：未查證假設那條在計畫檔條目下，不在分析報告條目下', planItem.includes('計畫檔裡標「未查證」的假設') && reportItem !== '' && !reportItem.includes('計畫檔裡標「未查證」的假設'));
 
 console.log('\n[4c] --ref：Read 被權限擋下時仍讀得到參考檔');
 const refList = runLog(['--ref'], tmp);
@@ -440,6 +448,10 @@ check('push 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent(
 check('stop 放行', allowed(run(path.join(HOOKS, 'guard-stop.js'), stopEvent(false), tmp)));
 const s2 = run(path.join(HOOKS, 'session-start.js'), startEvent(), tmp);
 check('session-start 無提示', s2.code === 0 && !s2.out.trim());
+runLog(['--set', '狀態=待審查', '--set', '下一步=修交付 commit 失敗：pre-commit'], tmp);
+check('完成後改回待審查：交付 commit 被擋', denied(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "feat: paging"'), tmp)));
+runLog(['--set', '狀態=完成', '--set', '下一步=無（已完成）'], tmp);
+check('再改回完成：交付 commit 放行', allowed(run(path.join(HOOKS, 'guard-commit.js'), bashEvent('git commit -m "feat: paging"'), tmp)));
 
 console.log('\n[9] 無人看管低風險例外（v0.3 預留）');
 runLog(['--new', 'auto-low', '--set', '等級=低', '--set', '無人看管=是', '--set', '下一步=x'], tmp);
