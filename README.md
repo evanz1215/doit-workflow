@@ -11,7 +11,7 @@ v0.2 範圍：低／中／高風險、brownfield、一般模式、plan-critic／
 
 hooks 防的是流程漂移，不是刻意繞過。剩餘限制：
 
-- 用 Bash 改檔（`sed -i`、重導向）只在實作開始前（分支尚未建立）由 guard-dirty 事後抓到：指令已經執行；確定是 agent 造成的才由 agent 還原，否則列出變更問使用者；實作開始後回到鎖定狀態時用 Bash 改檔抓不到。實作開始前，測試或 build 留下未被 gitignore 的產物也會被 guard-dirty 擋，需要使用者處理或加進 `.git/info/exclude`；任務建立後、實作開始前使用者自己改的檔案也一樣，只要不清掉，之後每次 Bash／PowerShell 呼叫都會再被擋一次。
+- 用 Bash 改檔（`sed -i`、重導向）只在實作開始前（計畫未批准，或已批准但分支尚未建立）由 guard-dirty 事後抓到：指令已經執行；確定是 agent 造成的才由 agent 還原，否則列出變更問使用者；實作開始後回到鎖定狀態時用 Bash 改檔抓不到。實作開始前，測試或 build 留下未被 gitignore 的產物也會被 guard-dirty 擋，需要使用者處理或加進 `.git/info/exclude`；任務建立後、實作開始前使用者自己改的檔案也一樣，只要不清掉，之後每次 Bash／PowerShell 呼叫都會再被擋一次。
 - `bash -lc` 合寫旗標、pwsh 帶值的選項（如 `-ExecutionPolicy Bypass -Command`）、`cmd /c git`、PowerShell `& git push`／`Start-Process git`、`eval`、腳本檔內呼叫 git、gh 帶值的選項（`gh --repo x pr merge`、`gh -R x pr merge`、`gh pr -R x merge`）、大寫 `GH pr merge` 擋不到。
 
 ```
@@ -22,9 +22,9 @@ doit/
   skills/ask|explain|plan|qa|retro|init|resume|status|abort/  其他指令（/doit:ask、/doit:explain、/doit:plan、/doit:retro、/doit:qa、/doit:init、/doit:resume、/doit:status、/doit:abort）
   agents/                         plan-critic / implementer / verifier / reviewer 四個 subagent
   hooks/hooks.json                五個 hook 的註冊
-  hooks/guard-edit.js             未批准不得改專案檔
+  hooks/guard-edit.js             未批准、或已批准但未開分支時不得改專案檔
   hooks/guard-commit.js           未完成不得交付 commit / push / merge（含 gh pr merge、bash -c 引號內的 git）
-  hooks/guard-stop.js             離開前必須填「下一步」（改狀態沒帶下一步會被清空）
+  hooks/guard-stop.js             離開前必須填「下一步」（改狀態沒帶下一步會被清空）；只在這個 session 跑過寫入類 log.js（--new／--set／--close／紀錄行）時才擋
   hooks/guard-dirty.js            實作開始前 Bash 指令跑完工作目錄要乾淨
   hooks/session-start.js          有未完成任務時提示
   tools/log.js                    任務檔唯一寫入工具

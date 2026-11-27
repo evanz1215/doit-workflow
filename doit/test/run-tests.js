@@ -260,6 +260,13 @@ check('status 列出未完成計畫檔的任務進度與下一個可做的任務
 const archiveLines = [path.join(PLUGIN, '..', 'README.md'), path.join(PLUGIN, 'README.md'), path.join(PLUGIN, 'skills', 'retro', 'SKILL.md'), path.join(PLUGIN, 'skills', 'qa', 'SKILL.md')]
   .map((f) => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter((l) => l.includes('.doit/archive/')));
 check('四份文件提到 .doit/archive/ 的行都寫明使用者手動搬入、doit 不會自動寫入', archiveLines.every((ls) => ls.length > 0 && ls.every((l) => l.includes('手動') && l.includes('不會自動寫入'))), JSON.stringify(archiveLines));
+const rootReadmeLines = fs.readFileSync(path.join(PLUGIN, '..', 'README.md'), 'utf8').split(/\r?\n/);
+const rule1Line = skillText.split(/\r?\n/).find((l) => l.startsWith('1. **未批准不動手**')) || '';
+const stopLine = rootReadmeLines.find((l) => l.includes('hooks/guard-stop.js')) || '';
+const editLine = rootReadmeLines.find((l) => l.includes('hooks/guard-edit.js')) || '';
+check('文件寫到新 hook 行為：硬規則 1 已批准未開分支也擋、README guard-stop 只認寫入類 log.js、guard-edit 涵蓋未開分支',
+  rule1Line.includes('已批准但還沒開分支') && rule1Line.includes('開分支') && stopLine.includes('寫入類 log.js') && stopLine.includes('--set') && editLine.includes('已批准但未開分支'),
+  JSON.stringify([rule1Line, stopLine, editLine]));
 check('單一任務檢討也看 --timing 的耗時與審查輪數', /--timing/.test(fs.readFileSync(path.join(PLUGIN, 'skills', 'go', 'references', 'retro.md'), 'utf8')));
 check('go 階段 0 讀 /doit:explain 的報告並檢查基準 SHA 後的變更', /指令提到分析報告/.test(skillText) && /基準 SHA/.test(skillText));
 const planText = fs.readFileSync(path.join(PLUGIN, 'skills', 'plan', 'SKILL.md'), 'utf8');
